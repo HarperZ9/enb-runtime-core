@@ -3,7 +3,7 @@
   "policy": {
     "default_capability_state": "unavailable",
     "runtime_identity_admission_is_not_symbol_admission": true,
-    "provider_loader_bytes_are_identity": false,
+    "optional_skse_loader_bytes_are_admission_identity": false,
     "mutation_default": "disabled",
     "naked_offsets_are_trusted": false,
     "raw_replacement_renderer_components_are_in_scope": false
@@ -21,7 +21,7 @@
       "admission_scope": "executable identity only; every symbol remains independently fail-closed"
     }
   ],
-  "skse_runtime_provider_allowlist": [
+  "optional_skse_coexistence_evidence": [
     {
       "identifier": "skse64-runtime-2.2.6",
       "filename": "skse64_1_6_1170.dll",
@@ -30,7 +30,8 @@
       "architecture": "x64",
       "file_size": 1173504,
       "sha256": "c9a2c8a80df6bf2372c5f49468bb2e5ab67786157265b6f29ece9f4eac075d54",
-      "admission_scope": "runtime provider DLL identity only; loader executables are intentionally excluded"
+      "capability_prerequisite": false,
+      "admission_scope": "passive coexistence and collision-avoidance evidence only; SKSE absence never blocks the ENB-loaded adapter"
     }
   ],
   "relocation_provider_artifact_allowlist": [
@@ -53,13 +54,6 @@
       "admission_scope": "initially admitted relocation artifact; external file is not distributed"
     }
   ],
-  "planned_native_relocation_provider": {
-    "provider_kind": "embedded_manifest",
-    "owner": "Truth ENB",
-    "status": "not yet allowlisted",
-    "requirements": "versioned relocation and signature records bound to an exact Skyrim executable identity, artifact hash, schema version, and per-symbol validation contract",
-    "distribution_goal": "ship inside the product so Address Library is not an end-user requirement"
-  },
   "commonlib_evidence": {
     "recovered_version": "3.7.0",
     "source": "recovered build metadata",
@@ -73,22 +67,61 @@
         "commit": "6bc1613f18f850c60d906575296f982c6dfcc9e0"
       }
     ],
-    "admission_scope": "statically linked adapter build provenance only; CommonLib is not an end-user runtime requirement and this record does not admit a symbol"
+    "admission_scope": "historical implementation provenance only; the ENB-loaded adapter parses Address Library directly and has no CommonLib runtime or link dependency"
   },
   "provider_contract": {
     "validated_relocation_provider_required": true,
-    "initially_admitted_relocation_provider_kinds": [
+    "admitted_relocation_provider_kinds": [
       "address_library"
     ],
     "engine_adapter_build_version_required": true,
+    "adapter_load_path": "ENBSeries module",
+    "address_library_parse_mode": "direct read-only v2 parse",
+    "skse_runtime_required": false,
     "commonlib_end_user_runtime_required": false,
-    "exact_skse_runtime_provider_required": true,
-    "skse_loader_identity_required": false,
+    "commonlib_link_dependency_required": false,
+    "optional_skse_detection": "passive coexistence and collision avoidance only",
     "runtime_must_match_executable_identity": true,
     "descriptor_version_ranges_are_inclusive": true,
     "unknown_adapter_schema_names": "reject; never default to a valid target or source enum",
     "inline_hook_requirement": "complete expected prologue bytes plus readable executable module range",
     "vtable_hook_requirement": "declared slot plus exact RTTI identity plus readable vtable and executable module target"
+  },
+  "address_library_v2_parser_contract": {
+    "format_provenance": [
+      "https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/REL/ID.h",
+      "https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/src/REL/ID.cpp"
+    ],
+    "implementation": "independent bounded parser; no CommonLib code or runtime dependency",
+    "required_checks": [
+      "opaque AdmitRelocationArtifact receipt bound to the exact immutable byte span",
+      "production verifier computes SHA-256 over those bytes instead of trusting filename or caller metadata",
+      "format v2",
+      "runtime 1.6.1170.0",
+      "8-byte pointer size",
+      "positive bounded entry count",
+      "bounded nibble and delta reads",
+      "addition, subtraction, and scaling overflow checks",
+      "module image offset bounds",
+      "sorted unique relocation IDs",
+      "no trailing payload",
+      "no shared writable mapping"
+    ]
+  },
+  "typed_property_slice": {
+    "mutable": [
+      "camera.world_fov",
+      "camera.first_person_fov"
+    ],
+    "observer_only": [
+      "camera.inverse_view_projection",
+      "weather.current_form_id",
+      "weather.outgoing_form_id",
+      "weather.transition",
+      "calendar.game_hour"
+    ],
+    "unknown_identifier_policy": "reject",
+    "object_mutation_policy": "HookReady capability plus validated owner and generation token, declared field, writable non-executable region, main-thread phase gate, exact captured baseline, readback after every write attempt, and rollback before owner invalidation"
   },
   "recovered_enb_plugin_abi_evidence": [
     {
@@ -190,6 +223,16 @@
     {
       "source": "src/d3d11_proxy and RAW lineage",
       "reason": "proxy ownership, phase classification, DXBC patching, and replacement rendering are different project DNA"
+    }
+  ],
+  "peer_behavior_evidence": [
+    {
+      "project": "HakaSapl Horizon Fix",
+      "version": "0.2.3",
+      "release_date": "2026-07-11",
+      "observed_behavior": "LOD-water scenegraph donor tiles, custom frustum culling, and a depth-viewport hook; release notes state compatibility with ENB builds dated 2026-07-12 or later",
+      "admission_scope": "peer behavior evidence only; no GPL code is copied and no SKSE/CommonLib dependency is introduced",
+      "future_original_constraint": "preserve ENB LOD/water semantics while avoiding a hundreds-of-draw-calls donor-tile architecture"
     }
   ],
   "evidence_sources": [

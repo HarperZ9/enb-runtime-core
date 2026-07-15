@@ -27,13 +27,15 @@ The runtime core provides neutral loaded-host resolution and package fingerprint
   `1.6.1170.0` fingerprint.
 - Runtime- and version-constrained relocation-provider and engine-adapter
   symbol descriptors.
-- Exact relocation-artifact admission. Address Library is the first provider;
-  an embedded product-owned manifest is a distinct reserved provider kind.
+- Exact Address Library artifact admission and an independent, bounded v2
+  database parser with no shared writable mapping.
 - Module-bound, protection-aware prologue and vtable/RTTI validation results.
 - Six observer capabilities that remain unavailable when any assigned contract
   is missing or invalid.
 - Transactional, read-back-verified property patch journaling with reverse
   rollback and explicit recovery state.
+- A separate typed object-property journal for heap-backed engine fields, bound
+  to owner identity, generation, declared field schema, thread, and phase.
 
 The `BeginSave` transition is synchronous. When accepted from `Active`, it records the quiesce and baseline-restored phases before returning `SaveInProgress`; callers never observe a partially accepted save entry.
 
@@ -53,11 +55,15 @@ The `BeginSave` transition is synchronous. When accepted from `Active`, it recor
 - Perform all host-specific mutation, restoration, logging, and recovery work.
 - Collect loaded `SkyrimSE.exe` file and image evidence without loading another
   module.
-- Resolve relocation IDs through the selected provider and implement
-  memory-region, byte-read, byte-write, and MSVC RTTI inspection adapters.
+- Load through ENB, parse the admitted Address Library artifact directly, and
+  resolve relocation IDs without SKSE or CommonLib.
+- Implement memory-region, byte-read, byte-write, and MSVC RTTI inspection
+  adapters.
 - Install and remove hooks only after the core reports a hook-ready contract.
 - Keep every engine mutation behind both an explicit product feature gate and
   the lifecycle mutation gate.
+- Roll back object-property transactions before the adapter invalidates or
+  replaces their owner/generation tokens.
 - Stop product work whenever a transition is rejected or mutation permission is false.
 
 ## Excluded concerns
@@ -70,6 +76,9 @@ only through an injected adapter after all gates validate; this repository has
 no platform memory writer. Callback context contains no lifecycle dispatch,
 product mutation, allocation, blocking, or logging. Those concerns belong in
 integration layers outside this repository.
+
+SKSE may be detected passively for coexistence and collision avoidance. Its
+absence is not an error and never blocks a supported capability.
 
 The Skyrim bridge is ENB-compatible lineage: ENB remains the host. RAW's proxy
 ownership, nine-phase replacement pipeline, depth capture, DXBC patching, and

@@ -7,7 +7,8 @@ adapter. ENB remains the rendering host. The core can admit an exact Skyrim
 runtime identity, validate adapter-supplied relocation and engine-symbol
 contracts, publish fail-closed observation capabilities, and journal narrowly
 scoped reversible property changes. It does not install an SKSE plugin, resolve
-live relocation IDs, or own a renderer.
+live relocation IDs, or own a renderer. The release adapter is loaded by ENB
+and has no SKSE or CommonLib runtime/link dependency.
 
 This is deliberately not RAW. It contains no D3D11 proxy, swap-chain ownership,
 DXBC rewriting, render replacement, material pipeline, phase classifier, or
@@ -23,14 +24,10 @@ they are incompatible with an ENB-hosted bridge.
    nonempty SHA-256 and version evidence, valid loaded image bounds, and an
    exact allowlist match. The only built-in identity is the captured
    `1.6.1170.0` executable. Runtime admission does not admit any symbol.
-3. The adapter supplies the exact SKSE runtime-provider DLL identity; relocation
-   provider kind, artifact identity, selected runtime, and semantic version;
-   and its statically linked engine-adapter build version. The admitted SKSE
-   2.2.6 provider is
-   `skse64_1_6_1170.dll`; its filename, size, and SHA-256 must all match.
-   Loader executables are deliberately excluded because recovered official and
-   custom loaders differed while providing the same runtime DLL. The initial
-   relocation allowlist contains the two captured Address Library databases.
+3. The ENB-loaded adapter supplies the Address Library artifact identity,
+   selected runtime, and adapter build version. The only admitted relocation
+   artifacts are the two captured Address Library v2 databases for 1.6.1170;
+   size and SHA-256 must match exactly.
 4. Every `SymbolDescriptor` supplies its own exact runtime and inclusive
    provider-version constraints. A relocation ID must resolve inside the
    loaded image.
@@ -47,6 +44,32 @@ product adapter that owns installation and teardown. The adapter must also
 prove instruction boundaries for a prologue and implement RTTI matching by
 walking the MSVC complete-object-locator/type-descriptor chain; a name supplied
 without that evidence is not sufficient.
+
+SKSE detection is optional and passive. It may inform collision avoidance, but
+SKSE absence never blocks runtime, symbol, capability, observation, or property
+admission.
+
+## Direct Address Library parser
+
+`ParseAddressLibraryV2` independently implements the documented v2 header and
+nibble/delta encoding. The format provenance is CommonLibSSE-NG's official
+[`REL/ID.h`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/include/REL/ID.h)
+and [`REL/ID.cpp`](https://github.com/CharmedBaryon/CommonLibSSE-NG/blob/main/src/REL/ID.cpp);
+no CommonLib implementation code is copied or linked.
+
+Parsing requires an opaque `RelocationArtifactReceipt` issued only by
+`AdmitRelocationArtifact`. The admission boundary first matches the artifact's
+kind, runtime, variant, size, and expected SHA-256 against the built-in
+allowlist, then calls the supplied `RelocationArtifactDigestVerifier` over the
+exact bytes. That verifier is a security boundary: a production adapter must
+compute SHA-256 from the bytes and compare it with the supplied digest; it must
+not trust filename or caller metadata. The receipt is bound to that exact
+immutable byte span and cannot be ordinarily constructed or retargeted.
+
+The parser then checks format 2, runtime 1.6.1170.0, eight-byte pointer size,
+positive bounded entry count, every variable-width read, delta/scaling overflow
+and underflow, module offset bounds, trailing bytes, and duplicate IDs. Entries
+are sorted into an owned database. The core creates no shared writable mapping.
 
 ## Capability boundary
 
@@ -65,17 +88,9 @@ as evidence, not as trusted offsets. It also records the two exact Address
 Library artifact fingerprints admitted for runtime 1.6.1170; the binaries
 remain external and are not distributed by this repository.
 
-The recovered build metadata pins CommonLibSSE-NG 3.7.0 and records its two
-vcpkg baselines. CommonLib is a statically linked implementation detail of the
-first adapter, not an end-user runtime dependency. Its build version is
-provenance evidence, not blanket symbol admission: each runtime symbol still
-needs its own validated descriptor.
-
-The neutral API does not make Address Library permanent. It reserves an
-`EmbeddedManifest` relocation-provider kind for a Truth-owned, versioned
-relocation/signature manifest shipped with the product. That provider remains
-unavailable until an exact manifest artifact and its per-symbol contracts are
-added to the allowlist; provider-kind selection can never bypass validation.
+Recovered CommonLibSSE-NG 3.7.0 metadata and vcpkg baselines remain historical
+provenance for understanding the old typed access path. They are not part of
+the release adapter. Each live symbol still needs its own validated descriptor.
 
 ## ENB adapter shapes and SDK boundary
 
@@ -98,7 +113,18 @@ the major-family test. The old binary's behavior remains evidence rather than
 reusable admitted code. The Playground binary has no export table and is
 recorded as incomplete evidence. Neither binary is distributed here.
 
-## Reversible property journal
+## Typed observation and reversible properties
+
+The first property schema recognizes exactly seven names:
+
+- `camera.world_fov` and `camera.first_person_fov` are observable and eligible
+  for gated reversible object mutation;
+- `camera.inverse_view_projection`, current/outgoing weather form IDs, weather
+  transition, and game hour are observer-only.
+
+Names are exact. Unknown or differently cased names reject; they never default
+to a valid property. All observations require the exact admitted runtime, their
+capability, the declared type, and finite/ranged values.
 
 `PatchJournal` is off unless the caller supplies all of these at once:
 
@@ -117,11 +143,25 @@ reverse order. Repeated apply and rollback are idempotent. Rollback does not
 depend on the feature gate because baseline restoration must remain possible
 after a feature is disabled.
 
-The memory adapter's `Write` contract is all-or-nothing: `false` means no byte
-was changed. A Windows implementation must provide that guarantee around page
-protection changes and instruction-cache handling before executable patches
-can ever be considered. This first slice rejects executable regions for
-property patches entirely.
+The static `PatchJournal` memory adapter's `Write` contract is all-or-nothing:
+`false` means no byte was changed. A Windows implementation must provide that
+guarantee around page protection changes and instruction-cache handling before
+executable patches can ever be considered. This first slice rejects executable
+regions for property patches entirely.
+
+`PatchJournal` remains restricted to static data inside the admitted
+`SkyrimSE.exe` image. Heap-backed fields such as `PlayerCamera::worldFOV` use a
+separate `ObjectPropertyJournal`; module containment is not weakened. An object
+transaction additionally requires a current owner address and generation
+token, the adapter's declared property-to-field binding, a readable/writable
+non-executable region, an allowed main-thread phase, and a matching capability
+in `HookReady` state; `ObserveReady` is insufficient for mutation. It captures
+and verifies the exact baseline before writing and must roll back while the
+owner token is still current. If the owner invalidates first, the journal enters
+`RecoveryRequired` and performs no unsafe write.
+Every write attempt is read back. A writer that returns false after a partial
+write is treated as dirty until the exact baseline is explicitly restored and
+verified.
 
 ## Explicit exclusions
 
@@ -135,17 +175,18 @@ property patches entirely.
 - No naked address or `ID + fixed offset` becomes a supported descriptor.
 - No protected binary, decompilation output, or recovered implementation is
   copied into this repository.
+- HakaSapl Horizon Fix 0.2.3 is peer behavior evidence only. A future original
+  horizon capability must preserve ENB LOD/water semantics without copying GPL
+  code or adopting its hundreds-of-draw-calls donor-tile architecture.
 
 ## Remaining live work
 
-The first live adapter still needs a deferred SKSE bootstrap, a statically
-linked CommonLib implementation, a Windows memory-query/read adapter,
-relocation ID resolution, complete runtime symbol records, MSVC RTTI
-verification, separate pull-provider and push-callback lifecycle adapters, and
-live capture tests inside Skyrim. The dependency-free Truth path additionally
-needs its owned embedded relocation/signature manifest and a native bootstrap
-adapter so Address Library can disappear from product setup and CommonLib can
-later be replaced inside the owned build path.
+The live ENB adapter still needs an immutable file loader and production
+SHA-256 verifier feeding `AdmitRelocationArtifact`, a Windows
+memory-query/read/write adapter,
+complete runtime symbol records, MSVC RTTI verification, concrete owner
+generation tracking, ENB lifecycle wiring, and capture/rollback tests inside
+Skyrim. Optional SKSE coexistence detection must remain passive.
 Depth and mid-frame phase observation need an ENB-compatible route that does
 not take over `d3d11.dll`. Until those pieces validate, the corresponding
 capabilities remain unavailable and mutation cannot start.

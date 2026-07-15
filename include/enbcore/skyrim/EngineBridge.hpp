@@ -32,17 +32,6 @@ struct InterfaceVersion final {
         const InterfaceVersion&) const noexcept = default;
 };
 
-struct SkseRuntimeRecord final {
-    std::string_view identifier;
-    std::wstring_view filename;
-    InterfaceVersion version{};
-    Sha256Digest sha256{};
-    std::uint64_t file_size{0};
-};
-
-[[nodiscard]] std::span<const SkseRuntimeRecord>
-SupportedSkseRuntimes() noexcept;
-
 enum class ExecutableArchitecture : std::uint8_t {
     Unknown = 0,
     X64 = 1,
@@ -111,7 +100,6 @@ struct RuntimeEvaluation final {
 enum class RelocationProviderKind : std::uint8_t {
     None = 0,
     AddressLibrary = 1,
-    EmbeddedManifest = 2,
 };
 
 enum class RuntimeVariant : std::uint8_t {
@@ -141,10 +129,6 @@ struct SymbolProviderContext final {
     Sha256Digest relocation_artifact_sha256{};
     std::uint64_t relocation_artifact_file_size{0};
     InterfaceVersion engine_adapter_version{};
-    std::wstring_view skse_runtime_filename;
-    InterfaceVersion skse_runtime_version{};
-    Sha256Digest skse_runtime_sha256{};
-    std::uint64_t skse_runtime_file_size{0};
 };
 
 struct RuntimeSymbolConstraint final {
@@ -155,8 +139,6 @@ struct RuntimeSymbolConstraint final {
     InterfaceVersion maximum_relocation_provider{};
     InterfaceVersion minimum_engine_adapter{};
     InterfaceVersion maximum_engine_adapter{};
-    InterfaceVersion minimum_skse{};
-    InterfaceVersion maximum_skse{};
 };
 
 enum class Capability : std::uint8_t {
@@ -238,8 +220,7 @@ enum class SymbolDiagnostic : std::uint8_t {
     RttiIdentityMismatch = 14,
     VtableEntryReadFailed = 15,
     MissingDescriptor = 16,
-    SkseRuntimeUnsupported = 17,
-    RelocationProviderUnsupported = 18,
+    RelocationProviderUnsupported = 17,
 };
 
 struct SymbolValidation final {

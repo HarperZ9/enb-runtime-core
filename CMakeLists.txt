@@ -26,7 +26,10 @@ add_library(enb_runtime_core STATIC
     src/platform/windows/WindowsWrapperFingerprintPlatform.cpp
     src/runtime/CallbackSession.cpp
     src/runtime/LifecycleGate.cpp
+    src/skyrim/AddressLibraryDatabase.cpp
     src/skyrim/EngineBridge.cpp
+    src/skyrim/EngineProperties.cpp
+    src/skyrim/ObjectPropertyJournal.cpp
     src/skyrim/PatchJournal.cpp
 )
 
@@ -159,6 +162,38 @@ if(BUILD_TESTING)
     endif()
 
     add_test(NAME skyrim_engine_bridge COMMAND enb_skyrim_engine_bridge_tests)
+
+    add_executable(enb_address_library_database_tests
+        tests/AddressLibraryDatabaseTests.cpp
+    )
+
+    target_compile_features(enb_address_library_database_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_address_library_database_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(
+            enb_address_library_database_tests
+            PRIVATE /W4 /WX /permissive-
+        )
+    endif()
+
+    add_test(NAME address_library_database COMMAND enb_address_library_database_tests)
+
+    add_executable(enb_engine_property_tests
+        tests/EnginePropertyTests.cpp
+    )
+
+    target_compile_features(enb_engine_property_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_engine_property_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(
+            enb_engine_property_tests
+            PRIVATE /W4 /WX /permissive-
+        )
+    endif()
+
+    add_test(NAME engine_properties COMMAND enb_engine_property_tests)
 
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp

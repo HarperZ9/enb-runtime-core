@@ -53,13 +53,6 @@ constexpr Sha256Digest kExecutableDigest{
     0x33U, 0xE7U, 0x2BU, 0x2BU, 0x73U, 0xF3U, 0x3BU, 0xE9U,
 };
 constexpr std::uint64_t kExecutableFileSize = 37'157'144U;
-constexpr Sha256Digest kSkseRuntimeDigest{
-    0xC9U, 0xA2U, 0xC8U, 0xA8U, 0x0DU, 0xF6U, 0xBFU, 0x23U,
-    0x72U, 0xC5U, 0xF4U, 0x94U, 0x68U, 0xBBU, 0x2EU, 0x5AU,
-    0xB6U, 0x77U, 0x86U, 0x15U, 0x72U, 0x65U, 0xB6U, 0xF2U,
-    0x9EU, 0xCEU, 0x9FU, 0x4EU, 0xACU, 0x07U, 0x5DU, 0x54U,
-};
-constexpr std::uint64_t kSkseRuntimeFileSize = 1'173'504U;
 constexpr Sha256Digest kRelocationArtifactDigest{
     0xC4U, 0x09U, 0x3CU, 0x56U, 0x9AU, 0x3CU, 0x83U, 0xB2U,
     0x65U, 0x87U, 0xF4U, 0xB9U, 0xEAU, 0x4CU, 0x55U, 0xDEU,
@@ -111,10 +104,6 @@ SymbolProviderContext MakeProvider()
     provider.relocation_artifact_sha256 = kRelocationArtifactDigest;
     provider.relocation_artifact_file_size = kRelocationArtifactFileSize;
     provider.engine_adapter_version = kEngineAdapterVersion;
-    provider.skse_runtime_filename = L"skse64_1_6_1170.dll";
-    provider.skse_runtime_version = InterfaceVersion{2, 2, 6};
-    provider.skse_runtime_sha256 = kSkseRuntimeDigest;
-    provider.skse_runtime_file_size = kSkseRuntimeFileSize;
     return provider;
 }
 
@@ -128,8 +117,6 @@ RuntimeSymbolConstraint MakeConstraint()
     constraint.maximum_relocation_provider = InterfaceVersion{11, 9, 9};
     constraint.minimum_engine_adapter = InterfaceVersion{3, 7, 0};
     constraint.maximum_engine_adapter = InterfaceVersion{3, 9, 9};
-    constraint.minimum_skse = InterfaceVersion{2, 2, 6};
-    constraint.maximum_skse = InterfaceVersion{2, 2, 6};
     return constraint;
 }
 
@@ -430,49 +417,32 @@ void relocation_provider_admission_requires_an_exact_artifact_identity()
     EXPECT(!wrong_artifact.hook_arming_permitted);
 
     provider = MakeProvider();
-    provider.relocation_provider_kind = RelocationProviderKind::EmbeddedManifest;
-    const SymbolValidation unregistered_native_manifest = ValidateSymbol(
+    provider.relocation_provider_kind = RelocationProviderKind::None;
+    const SymbolValidation missing_provider_kind = ValidateSymbol(
         MakeIdentity(), AdmitSyntheticRuntime(), provider, MakeDataDescriptor(), memory);
 
-    EXPECT(unregistered_native_manifest.status == SymbolStatus::Rejected);
-    EXPECT(unregistered_native_manifest.diagnostic
+    EXPECT(missing_provider_kind.status == SymbolStatus::Rejected);
+    EXPECT(missing_provider_kind.diagnostic
         == SymbolDiagnostic::RelocationProviderUnsupported);
-    EXPECT(!unregistered_native_manifest.hook_arming_permitted);
+    EXPECT(!missing_provider_kind.hook_arming_permitted);
     EXPECT(memory.writeCalls() == 0U);
 }
 
-void skse_provider_admission_uses_the_runtime_dll_and_never_loader_bytes()
+void address_library_admission_does_not_require_an_skse_runtime()
 {
-    const std::span records = SupportedSkseRuntimes();
-    EXPECT(records.size() == 1U);
-    EXPECT(records.front().filename == L"skse64_1_6_1170.dll");
-    EXPECT(records.front().version == (InterfaceVersion{2, 2, 6}));
-    EXPECT(records.front().sha256 == kSkseRuntimeDigest);
-    EXPECT(records.front().file_size == kSkseRuntimeFileSize);
-
     FakeMemory memory = MakeValidMemory();
     memory.MapSymbol(100U, kDataAddress);
     const std::array<std::uint8_t, 1> bytes{0x44U};
     memory.Put(kDataAddress, bytes);
-    SymbolProviderContext provider = MakeProvider();
-    provider.skse_runtime_sha256[0] ^= 0xFFU;
 
+    SymbolProviderContext provider = MakeProvider();
     const SymbolValidation result = ValidateSymbol(
         MakeIdentity(), AdmitSyntheticRuntime(), provider, MakeDataDescriptor(), memory);
 
-    EXPECT(result.status == SymbolStatus::Rejected);
-    EXPECT(result.diagnostic == SymbolDiagnostic::SkseRuntimeUnsupported);
+    EXPECT(result.status == SymbolStatus::Validated);
+    EXPECT(result.diagnostic == SymbolDiagnostic::None);
+    EXPECT(result.resolved_address == kDataAddress);
     EXPECT(!result.hook_arming_permitted);
-    EXPECT(memory.writeCalls() == 0U);
-
-    provider = MakeProvider();
-    provider.skse_runtime_filename = L"skse64_loader.exe";
-    const SymbolValidation loader = ValidateSymbol(
-        MakeIdentity(), AdmitSyntheticRuntime(), provider, MakeDataDescriptor(), memory);
-
-    EXPECT(loader.status == SymbolStatus::Rejected);
-    EXPECT(loader.diagnostic == SymbolDiagnostic::SkseRuntimeUnsupported);
-    EXPECT(!loader.hook_arming_permitted);
     EXPECT(memory.writeCalls() == 0U);
 }
 
@@ -841,7 +811,7 @@ int main()
     runtime_evaluation_owns_its_original_filename_receipt();
     missing_relocation_provider_rejects_without_touching_memory();
     relocation_provider_admission_requires_an_exact_artifact_identity();
-    skse_provider_admission_uses_the_runtime_dll_and_never_loader_bytes();
+    address_library_admission_does_not_require_an_skse_runtime();
     complete_prologue_bytes_are_required_before_hook_arming();
     module_bounds_and_memory_protection_are_both_mandatory();
     vtable_identity_and_slot_target_must_validate_before_arming();

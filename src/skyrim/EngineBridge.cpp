@@ -26,23 +26,6 @@ constexpr std::array kSupportedSkyrimRuntimes{
     },
 };
 
-constexpr Sha256Digest kSkse226Sha256{
-    0xC9U, 0xA2U, 0xC8U, 0xA8U, 0x0DU, 0xF6U, 0xBFU, 0x23U,
-    0x72U, 0xC5U, 0xF4U, 0x94U, 0x68U, 0xBBU, 0x2EU, 0x5AU,
-    0xB6U, 0x77U, 0x86U, 0x15U, 0x72U, 0x65U, 0xB6U, 0xF2U,
-    0x9EU, 0xCEU, 0x9FU, 0x4EU, 0xACU, 0x07U, 0x5DU, 0x54U,
-};
-
-constexpr std::array kSupportedSkseRuntimes{
-    SkseRuntimeRecord{
-        "skse-2.2.6-skyrim-1.6.1170",
-        L"skse64_1_6_1170.dll",
-        InterfaceVersion{2, 2, 6},
-        kSkse226Sha256,
-        1'173'504U,
-    },
-};
-
 constexpr Sha256Digest kAddressLibrary1170Sha256{
     0xC4U, 0x09U, 0x3CU, 0x56U, 0x9AU, 0x3CU, 0x83U, 0xB2U,
     0x65U, 0x87U, 0xF4U, 0xB9U, 0xEAU, 0x4CU, 0x55U, 0xDEU,
@@ -167,17 +150,6 @@ constexpr std::array kSupportedRelocationProviders{
     if (!supported_relocation_provider) {
         return SymbolDiagnostic::RelocationProviderUnsupported;
     }
-    const bool supported_skse = std::ranges::any_of(
-        kSupportedSkseRuntimes,
-        [&provider](const SkseRuntimeRecord& record) {
-            return provider.skse_runtime_filename == record.filename
-                && provider.skse_runtime_version == record.version
-                && provider.skse_runtime_sha256 == record.sha256
-                && provider.skse_runtime_file_size == record.file_size;
-        });
-    if (!supported_skse) {
-        return SymbolDiagnostic::SkseRuntimeUnsupported;
-    }
     if (provider.relocation_runtime != identity.runtime_version
         || descriptor.constraints.runtime_version != identity.runtime_version
         || provider.relocation_provider_kind
@@ -192,11 +164,7 @@ constexpr std::array kSupportedRelocationProviders{
         || !InRange(
             provider.engine_adapter_version,
             descriptor.constraints.minimum_engine_adapter,
-            descriptor.constraints.maximum_engine_adapter)
-        || !InRange(
-            provider.skse_runtime_version,
-            descriptor.constraints.minimum_skse,
-            descriptor.constraints.maximum_skse)) {
+            descriptor.constraints.maximum_engine_adapter)) {
         return SymbolDiagnostic::ProviderVersionUnsupported;
     }
     return SymbolDiagnostic::None;
@@ -207,11 +175,6 @@ constexpr std::array kSupportedRelocationProviders{
 std::span<const RuntimeSupportRecord> SupportedSkyrimRuntimes() noexcept
 {
     return kSupportedSkyrimRuntimes;
-}
-
-std::span<const SkseRuntimeRecord> SupportedSkseRuntimes() noexcept
-{
-    return kSupportedSkseRuntimes;
 }
 
 std::span<const RelocationProviderRecord> SupportedRelocationProviders() noexcept

@@ -62,9 +62,11 @@ Host resolution must run from deferred bootstrap after the Windows loader entry 
 
 The Skyrim engine bridge admits only an exact executable fingerprint, then
 validates each adapter-supplied relocation and engine-symbol contract
-independently. Address Library artifacts are the first admitted relocation
-provider; the API also reserves a provider kind for Truth's future embedded
-relocation/signature manifest, so Address Library is not a permanent rule.
+independently. The ENB-loaded adapter admits one of the two exact captured
+Address Library artifacts and parses its v2 relocation database directly with
+bounded reads. Parsing accepts only an opaque receipt from the named admission
+boundary after allowlist and byte-level SHA-256 verification. SKSE and CommonLib
+are not runtime or link prerequisites.
 Camera, depth, weather/time, render-phase, sky-shader, and lighting-shader
 capabilities all begin unavailable. Complete prologue bytes or an exact
 vtable-slot/RTTI contract are required before a hook can be reported ready.
@@ -75,6 +77,14 @@ when the product feature gate, lifecycle gate, exact runtime evaluation, and a
 validated capability all agree. It preflights the complete transaction,
 verifies every write, compensates partial application, and supports idempotent
 rollback. No Windows memory writer is included.
+
+Heap-backed engine objects use a separate `ObjectPropertyJournal`; module
+containment is never weakened to make object writes pass. The first typed
+schema exposes seven exact property names. Camera world/first-person FOV are
+the only reversible mutation targets. Camera matrices, weather identities and
+blend, and game hour remain observer-only. Object writes additionally require
+the current owner/generation token, declared field identity, main-thread phase,
+readable/writable non-executable memory, and rollback before owner invalidation.
 
 This path retains SkyrimBridge's ENB-as-host architecture. It does not import
 RAW's replacement D3D11 proxy, phase classifier, DXBC patching, depth ownership,
