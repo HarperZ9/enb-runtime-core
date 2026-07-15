@@ -1,0 +1,51 @@
+{
+  "version": 10,
+  "cmakeMinimumRequired": {
+    "major": 4,
+    "minor": 0,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "vs18-x64-static",
+      "displayName": "Visual Studio 18 2026 x64 (static CRT)",
+      "generator": "Visual Studio 18 2026",
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "architecture": {
+        "value": "x64",
+        "strategy": "set"
+      },
+      "cacheVariables": {
+        "BUILD_TESTING": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
+        "CMAKE_MSVC_RUNTIME_LIBRARY": "MultiThreaded$<$<CONFIG:Debug>:Debug>",
+        "CMAKE_VS_GLOBALS": "VcpkgEnabled=false"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "vs18-x64-static-debug",
+      "configurePreset": "vs18-x64-static",
+      "configuration": "Debug"
+    },
+    {
+      "name": "vs18-x64-static-release",
+      "configurePreset": "vs18-x64-static",
+      "configuration": "Release"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "vs18-x64-static-debug",
+      "configurePreset": "vs18-x64-static",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
+    }
+  ]
+}
