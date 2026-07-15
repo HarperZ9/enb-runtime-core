@@ -44,3 +44,11 @@ The library contains no host discovery, callback hooking, graphics implementatio
 | active or baseline-restored path | `Interrupt` | acknowledgement is required from `Active` | `Failed` | unchanged |
 
 Every other event/state pair is rejected without changing state or generation. Terminal states cannot re-enable mutation.
+
+## SDK ABI boundary
+
+The SDK contract owns fixed-width public values, binary layouts, typed export pointers, parameter validation, and host ABI readiness. It does not load a library or discover exports. Callers supply an `SdkExports` table only after their own package and wrapper identity gate.
+
+The admitted SDK report range is `1002 <= reported_version < 2000`. This range follows the official 1000-family compatibility rule and is not package admission. A null render-info result means the host is not ready yet; it is not a permanent incompatibility.
+
+The private-build ABI probe includes the official header only from the explicit external cache root. Hash verification precedes compilation and test execution. The official render-info constructor is never used by the probe because the captured header assigns its X dimension twice; layout and function ABI are verified without copying or modifying that header.

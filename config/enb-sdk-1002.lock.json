@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "artifact_role": "official_sdk",
+  "sdk_version": 1002,
+  "admitted_sdk_versions": {
+    "minimum": 1002,
+    "exclusive_maximum": 2000
+  },
+  "game_identifier": {
+    "hex": "0x10000006",
+    "unsigned_decimal": 268435462
+  },
+  "hashes": {
+    "archive_sha256": "B014F5B4EE28BF6AE97ECF558EDB9F391171B26C1FB2FCBAB6709C74226A8E80",
+    "header_sha256": "19B3E6A6F6A9D36357682DA321FBD53F0001B88D3011FE553BCADF4E66453288"
+  },
+  "abi": {
+    "target": "windows-x64-msvc",
+    "pointer": {
+      "size": 8,
+      "alignment": 8
+    },
+    "sdk_integer": {
+      "size": 4,
+      "alignment": 4,
+      "signed": true
+    },
+    "sdk_boolean": {
+      "size": 4,
+      "alignment": 4,
+      "signed": true
+    },
+    "parameter_kind_values": {
+      "none": 0,
+      "float": 1,
+      "integer": 2,
+      "hex": 3,
+      "boolean": 4,
+      "color3": 5,
+      "color4": 6,
+      "vector3": 7
+    },
+    "parameter_sizes_by_id": {
+      "0": 0,
+      "1": 4,
+      "2": 4,
+      "3": 4,
+      "4": 4,
+      "5": 12,
+      "6": 16,
+      "7": 12
+    },
+    "callback_ids": [1, 2, 3, 4, 5, 6, 7, 8],
+    "state_ids": [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23],
+    "parameter": {
+      "size": 24,
+      "alignment": 4,
+      "payload_bytes": 16,
+      "payload_offset": 0,
+      "size_offset": 16,
+      "type_offset": 20
+    },
+    "render_info": {
+      "size": 32,
+      "alignment": 8,
+      "device_offset": 0,
+      "device_context_offset": 8,
+      "swap_chain_offset": 16,
+      "screen_size_x_offset": 24,
+      "screen_size_y_offset": 28
+    },
+    "export_function_pointer": {
+      "size": 8,
+      "alignment": 8,
+      "count": 8
+    },
+    "sdk_exports": {
+      "size": 64,
+      "alignment": 8
+    }
+  }
+}

@@ -10,12 +10,21 @@ Requirements:
 - Visual Studio 18 2026 with the x64 C++ toolchain
 
 ```powershell
-cmake --preset vs18-x64-static
+cmake --preset vs18-x64-static -DENBCORE_ENB_SDK_ROOT="$env:ENB_SDK_ROOT"
 cmake --build --preset vs18-x64-static-debug
 ctest --output-on-failure --no-tests=error -C Debug --test-dir out/build/vs18-x64-static
 ```
 
 The preset selects the x64 generator and the static MSVC runtime for every configuration.
+
+`ENB_SDK_ROOT` must expand to an absolute external cache root with exactly this input layout:
+
+```text
+enbseries-sdk-1002.zip
+enbseries_sdk/enbseries.h
+```
+
+The build has no SDK search-path, network, or vendored fallback. It verifies both inputs against `config/enb-sdk-1002.lock.json` before compiling the private official-header ABI probe, and CTest repeats the hash verification before running the probe.
 
 ## Contract
 
@@ -26,5 +35,7 @@ Mutation is permitted only in `State::Active`. A first `BeginSave` from `Active`
 `SaveSucceeded`, `SaveFailed`, and `SaveCancelled` all converge on `ReapplyPending` after the outermost save outcome. Only `ReapplyAtVerifiedBarrier` returns the gate to `Active`, incrementing the generation exactly once. The caller supplies explicit outcomes; no host post-save callback is assumed.
 
 Shutdown and interruption paths retain mutation denial. Starting either path from `Active` requires the same restoration acknowledgement; starting from a save or reapply-pending state uses the already-restored baseline.
+
+`ValidateSdkHost` is an ABI readiness check. It requires all eight typed exports, admits reported SDK versions from 1002 through 1999, requires game identifier `0x10000006`, and returns `RenderInfoNotReady` when the host has not published render information yet. Package or wrapper fingerprint admission belongs to a later host integration gate; an admitted SDK report does not admit any package identity by itself.
 
 See [Architecture Boundary](docs/ARCHITECTURE_BOUNDARY.md) for ownership and integration constraints.
