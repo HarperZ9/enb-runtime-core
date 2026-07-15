@@ -1,6 +1,6 @@
 # ENB Runtime Core
 
-`enb-runtime-core` is a small C++23 state machine for coordinating host lifecycle, save quiescence, baseline restoration, and mutation reapplication. It has no third-party dependencies and owns no host or product objects.
+`enb-runtime-core` is a small C++23 runtime library for resolving an already-loaded ENB host and coordinating save quiescence, baseline restoration, and mutation reapplication. It has no third-party dependencies and owns no host or product objects.
 
 ## Build and test
 
@@ -37,5 +37,9 @@ Mutation is permitted only in `State::Active`. A first `BeginSave` from `Active`
 Shutdown and interruption paths retain mutation denial. Starting either path from `Active` requires the same restoration acknowledgement; starting from a save or reapply-pending state uses the already-restored baseline.
 
 `ValidateSdkHost` is an ABI readiness check. It requires all eight typed exports, admits reported SDK versions from 1002 through 1999, requires game identifier `0x10000006`, and returns `RenderInfoNotReady` when the host has not published render information yet. Package or wrapper fingerprint admission belongs to a later host integration gate; an admitted SDK report does not admit any package identity by itself.
+
+`ResolveLoadedEnbHost` examines only modules returned by an injected `LoadedModulePlatform`. The Windows adapter snapshots modules already present in the current process and resolves the eight SDK names directly from those handles. Anchorless modules are ignored; partial, incompatible, truncated, and ambiguous snapshots fail closed. A single compatible host with unavailable render information returns `NotReady` together with its complete typed export table so deferred bootstrap can retry without treating readiness as incompatibility.
+
+Host resolution must run from deferred bootstrap after the Windows loader entry point has returned. The library contains no loader entry point and never loads an ENB module.
 
 See [Architecture Boundary](docs/ARCHITECTURE_BOUNDARY.md) for ownership and integration constraints.

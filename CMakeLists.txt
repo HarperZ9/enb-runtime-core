@@ -12,12 +12,18 @@ set(
 )
 
 add_library(enb_runtime_core STATIC
+    src/enb/LoadedHostResolver.cpp
     src/enb/SdkContract.cpp
+    src/platform/windows/WindowsLoadedModulePlatform.cpp
     src/runtime/LifecycleGate.cpp
 )
 
 target_compile_features(enb_runtime_core PUBLIC cxx_std_23)
 target_include_directories(enb_runtime_core PUBLIC include)
+
+if(WIN32)
+    target_link_libraries(enb_runtime_core PRIVATE Psapi)
+endif()
 
 if(MSVC)
     target_compile_options(enb_runtime_core PRIVATE /W4 /WX /permissive-)
@@ -86,6 +92,19 @@ if(BUILD_TESTING)
     endif()
 
     add_test(NAME enb_sdk_contract COMMAND enb_sdk_contract_tests)
+
+    add_executable(enb_loaded_host_resolver_tests
+        tests/LoadedHostResolverTests.cpp
+    )
+
+    target_compile_features(enb_loaded_host_resolver_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_loaded_host_resolver_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(enb_loaded_host_resolver_tests PRIVATE /W4 /WX /permissive-)
+    endif()
+
+    add_test(NAME enb_loaded_host_resolver COMMAND enb_loaded_host_resolver_tests)
 
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp

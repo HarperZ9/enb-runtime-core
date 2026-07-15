@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The runtime core is a deterministic lifecycle gate. It answers whether a transition is valid and whether product mutation is permitted after that transition. It does not perform the mutation or baseline restoration itself.
+The runtime core provides neutral loaded-host resolution and a deterministic lifecycle gate. It selects one compatible already-loaded host, answers whether a lifecycle transition is valid, and reports whether product mutation is permitted after that transition. It does not perform product mutation or baseline restoration itself.
 
 ## Owned responsibilities
 
@@ -13,6 +13,9 @@ The runtime core is a deterministic lifecycle gate. It answers whether a transit
 - Application generation accounting.
 - Stable transition status and diagnostic enums.
 - No-change rejection of invalid events.
+- Injectable enumeration of already-loaded modules.
+- Exact resolution of the eight ENB SDK exports into `SdkExports`.
+- Fail-closed candidate selection and retryable render-info readiness.
 
 The `BeginSave` transition is synchronous. When accepted from `Active`, it records the quiesce and baseline-restored phases before returning `SaveInProgress`; callers never observe a partially accepted save entry.
 
@@ -23,12 +26,14 @@ The `BeginSave` transition is synchronous. When accepted from `Active`, it recor
 - Restore the complete baseline before setting `baseline_restoration_acknowledged`.
 - Deliver one explicit outcome for each accepted save depth.
 - Choose and verify the barrier before dispatching `ReapplyAtVerifiedBarrier`.
+- Invoke host resolution only from deferred bootstrap, outside the Windows loader entry point.
+- Apply package or wrapper fingerprint admission before enabling product integration.
 - Perform all host-specific mutation, restoration, logging, and recovery work.
 - Stop product work whenever a transition is rejected or mutation permission is false.
 
 ## Excluded concerns
 
-The library contains no host discovery, callback hooking, graphics implementation, memory patching, creative controls, artistic values, profiles, packaged assets, endpoint configuration, or product-specific policy. Those concerns belong in integration layers outside this repository.
+The library contains no module loading, callback hooking, graphics implementation, memory patching, creative controls, artistic values, profiles, packaged assets, endpoint configuration, or product-specific policy. Those concerns belong in integration layers outside this repository.
 
 ## Transition summary
 
@@ -47,7 +52,9 @@ Every other event/state pair is rejected without changing state or generation. T
 
 ## SDK ABI boundary
 
-The SDK contract owns fixed-width public values, binary layouts, typed export pointers, parameter validation, and host ABI readiness. It does not load a library or discover exports. Callers supply an `SdkExports` table only after their own package and wrapper identity gate.
+The SDK contract owns fixed-width public values, binary layouts, typed export pointers, parameter validation, and host ABI readiness. The loaded-host resolver builds that table through an injected platform boundary. Its Windows adapter enumerates the current process with `EnumProcessModules` and queries existing handles with `GetProcAddress`; it has no module-loading path.
+
+`ENBGetSDKVersion` is the candidate anchor. Modules without that exact export are ignored even if they contain similarly named or partial decoy symbols. An anchored candidate must contain all seven remaining exact exports. Any partial candidate, incompatible complete candidate, incomplete enumeration, or more than one compatible complete candidate rejects the whole snapshot. Only one compatible complete host is retained. If its render info is null, the resolver returns `NotReady` with the same module handle and complete export table that a ready result would carry.
 
 The admitted SDK report range is `1002 <= reported_version < 2000`. This range follows the official 1000-family compatibility rule and is not package admission. A null render-info result means the host is not ready yet; it is not a permanent incompatibility.
 
