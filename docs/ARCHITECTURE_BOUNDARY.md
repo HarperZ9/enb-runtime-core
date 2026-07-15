@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The runtime core provides neutral loaded-host resolution and a deterministic lifecycle gate. It selects one compatible already-loaded host, answers whether a lifecycle transition is valid, and reports whether product mutation is permitted after that transition. It does not perform product mutation or baseline restoration itself.
+The runtime core provides neutral loaded-host resolution, deferred callback delivery, and a deterministic lifecycle gate. It selects one compatible already-loaded host, moves callback notifications across an allocation-free boundary, answers whether a lifecycle transition is valid, and reports whether product mutation is permitted after that transition. It does not perform product mutation or baseline restoration itself.
 
 ## Owned responsibilities
 
@@ -16,6 +16,10 @@ The runtime core provides neutral loaded-host resolution and a deterministic lif
 - Injectable enumeration of already-loaded modules.
 - Exact resolution of the eight ENB SDK exports into `SdkExports`.
 - Fail-closed candidate selection and retryable render-info readiness.
+- One explicitly bootstrapped process-wide callback session.
+- Ordered translation of all eight SDK callback IDs into neutral records.
+- Bounded queue, unknown-ID, and overflow diagnostics.
+- Idempotent callback unregistration and publication teardown.
 
 The `BeginSave` transition is synchronous. When accepted from `Active`, it records the quiesce and baseline-restored phases before returning `SaveInProgress`; callers never observe a partially accepted save entry.
 
@@ -27,13 +31,16 @@ The `BeginSave` transition is synchronous. When accepted from `Active`, it recor
 - Deliver one explicit outcome for each accepted save depth.
 - Choose and verify the barrier before dispatching `ReapplyAtVerifiedBarrier`.
 - Invoke host resolution only from deferred bootstrap, outside the Windows loader entry point.
+- Serialize session bootstrap, retry, drain, stop, and failure operations.
+- Treat the host callback thread as the queue's single producer and one integration thread as its single consumer.
+- Drain callback records outside callback context and perform every lifecycle dispatch explicitly.
 - Apply package or wrapper fingerprint admission before enabling product integration.
 - Perform all host-specific mutation, restoration, logging, and recovery work.
 - Stop product work whenever a transition is rejected or mutation permission is false.
 
 ## Excluded concerns
 
-The library contains no module loading, callback hooking, graphics implementation, memory patching, creative controls, artistic values, profiles, packaged assets, endpoint configuration, or product-specific policy. Those concerns belong in integration layers outside this repository.
+The library contains no module loading, loader entry point, graphics implementation, memory patching, creative controls, artistic values, profiles, packaged assets, endpoint configuration, or product-specific policy. Callback context contains no lifecycle dispatch, product mutation, allocation, blocking, or logging. Those concerns belong in integration layers outside this repository.
 
 ## Transition summary
 
@@ -49,6 +56,24 @@ The library contains no module loading, callback hooking, graphics implementatio
 | active or baseline-restored path | `Interrupt` | acknowledgement is required from `Active` | `Failed` | unchanged |
 
 Every other event/state pair is rejected without changing state or generation. Terminal states cannot re-enable mutation.
+
+## Callback handoff boundary
+
+`CallbackSession::bootstrap` is an explicit operation that must run after loader lock. A retained resolver `NotReady` export table remains available for deterministic one-probe retries. Activation reserves the process slot, resets a fixed-capacity target, publishes it, and only then registers the exact SDK thunk. A second session cannot publish or register while that slot is owned.
+
+The thunk is `noexcept`, bounded, allocation-free, and lock-free on the supported x64 target. It is only the SPSC producer. `drain` is the consumer and preserves accepted callback order. Unknown IDs are rejected into diagnostics, and a full queue increments `overflow_events` rather than silently overwriting an older record.
+
+Neutral handoffs describe, but never execute, lifecycle work:
+
+| SDK callback | Neutral lifecycle handoff |
+| --- | --- |
+| `OnInit` | activation requested |
+| `PreSave` | save entry requested; baseline restoration remains caller-owned |
+| `OnExit` | shutdown requested |
+| `BeginFrame` | possible verified frame barrier observed |
+| `EndFrame`, `PostLoad`, `PreReset`, `PostReset` | notification only |
+
+`PostLoad` is not treated as a save outcome. The integration caller supplies `SaveSucceeded`, `SaveFailed`, or `SaveCancelled` separately and verifies any later reapplication barrier. There is no `PostSave` callback in the contract.
 
 ## SDK ABI boundary
 

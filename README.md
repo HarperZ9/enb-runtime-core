@@ -1,6 +1,6 @@
 # ENB Runtime Core
 
-`enb-runtime-core` is a small C++23 runtime library for resolving an already-loaded ENB host and coordinating save quiescence, baseline restoration, and mutation reapplication. It has no third-party dependencies and owns no host or product objects.
+`enb-runtime-core` is a small C++23 runtime library for resolving an already-loaded ENB host, deferring callback work onto a bounded neutral event queue, and coordinating save quiescence, baseline restoration, and mutation reapplication. It has no third-party dependencies and owns no host or product objects.
 
 ## Build and test
 
@@ -39,6 +39,10 @@ Shutdown and interruption paths retain mutation denial. Starting either path fro
 `ValidateSdkHost` is an ABI readiness check. It requires all eight typed exports, admits reported SDK versions from 1002 through 1999, requires game identifier `0x10000006`, and returns `RenderInfoNotReady` when the host has not published render information yet. Package or wrapper fingerprint admission belongs to a later host integration gate; an admitted SDK report does not admit any package identity by itself.
 
 `ResolveLoadedEnbHost` examines only modules returned by an injected `LoadedModulePlatform`. The Windows adapter snapshots modules already present in the current process and resolves the eight SDK names directly from those handles. Anchorless modules are ignored; partial, incompatible, truncated, and ambiguous snapshots fail closed. A single compatible host with unavailable render information returns `NotReady` together with its complete typed export table so deferred bootstrap can retry without treating readiness as incompatibility.
+
+`CallbackSession` accepts either that retained `NotReady` result or a `Ready` result from explicit bootstrap outside loader lock. It probes render readiness once per explicit attempt, publishes one process-wide target before registering the SDK callback, and rejects a concurrent second session. Stop and failure paths unregister and unpublish once; a saved late thunk is safe after teardown.
+
+The SDK thunk only validates the callback ID and writes an ordered record into a fixed-capacity lock-free SPSC queue. Unknown IDs and overflow are counted. `drain` runs outside callback context and exposes neutral records with explicit lifecycle handoff descriptions. It never dispatches `LifecycleGate` or invokes product mutation. In particular, `PostLoad` is notification-only, `PreSave` requests an explicit save-entry handoff, and `BeginFrame` only reports a possible verified barrier; callers still provide the save outcome and decide whether the barrier is valid. No post-save callback is invented.
 
 Host resolution must run from deferred bootstrap after the Windows loader entry point has returned. The library contains no loader entry point and never loads an ENB module.
 
