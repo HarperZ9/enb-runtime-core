@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The runtime core provides neutral loaded-host resolution, deferred callback delivery, and a deterministic lifecycle gate. It selects one compatible already-loaded host, moves callback notifications across an allocation-free boundary, answers whether a lifecycle transition is valid, and reports whether product mutation is permitted after that transition. It does not perform product mutation or baseline restoration itself.
+The runtime core provides neutral loaded-host resolution and package fingerprinting, deferred callback delivery, and a deterministic lifecycle gate. It selects one compatible already-loaded host, classifies its on-disk build identity, moves callback notifications across an allocation-free boundary, answers whether a lifecycle transition is valid, and reports whether product mutation is permitted after that transition. It does not perform product mutation or baseline restoration itself.
 
 ## Owned responsibilities
 
@@ -16,6 +16,9 @@ The runtime core provides neutral loaded-host resolution, deferred callback deli
 - Injectable enumeration of already-loaded modules.
 - Exact resolution of the eight ENB SDK exports into `SdkExports`.
 - Fail-closed candidate selection and retryable render-info readiness.
+- Canonical path lookup for an already-resolved module handle.
+- Streaming SHA-256, file-size, PE-machine, file-version, and original-name evidence.
+- Immutable wrapper-build admission with strict and audit-only policy results.
 - One explicitly bootstrapped process-wide callback session.
 - Ordered translation of all eight SDK callback IDs into neutral records.
 - Bounded queue, unknown-ID, and overflow diagnostics.
@@ -35,6 +38,7 @@ The `BeginSave` transition is synchronous. When accepted from `Active`, it recor
 - Treat the host callback thread as the queue's single producer and one integration thread as its single consumer.
 - Drain callback records outside callback context and perform every lifecycle dispatch explicitly.
 - Apply package or wrapper fingerprint admission before enabling product integration.
+- Choose strict or audit-only wrapper policy explicitly and retain unknown-build diagnostics.
 - Perform all host-specific mutation, restoration, logging, and recovery work.
 - Stop product work whenever a transition is rejected or mutation permission is false.
 
@@ -84,3 +88,11 @@ The SDK contract owns fixed-width public values, binary layouts, typed export po
 The admitted SDK report range is `1002 <= reported_version < 2000`. This range follows the official 1000-family compatibility rule and is not package admission. A null render-info result means the host is not ready yet; it is not a permanent incompatibility.
 
 The private-build ABI probe includes the official header only from the explicit external cache root. Hash verification precedes compilation and test execution. The official render-info constructor is never used by the probe because the captured header assigns its X dimension twice; layout and function ABI are verified without copying or modifying that header.
+
+## Wrapper fingerprint boundary
+
+Wrapper fingerprinting starts only after loaded-host resolution has returned a module handle. `GetModuleFileNameW` is retried with bounded buffer growth; the resulting file is opened read-only and in place. Windows CNG hashes it in fixed-size chunks. The same inspection captures the byte size and PE machine, while the injected version reader supplies the authored `StringFileInfo` `FileVersion` and `OriginalFilename` values. The file is never copied or loaded.
+
+The allowlist is an immutable exact record, not a version-range rule. SHA-256, byte size, four-part authored version, original filename, and x64 machine must all match one record. A mismatch produces `UnknownBuild` with field flags. An incomplete read produces `EvidenceUnavailable`. Strict policy rejects either result; audit-only policy permits continuation while preserving the non-known classification.
+
+Module-path and version-resource access are injected interfaces. Synthetic-file tests exercise the streaming hash and PE reader without bundling an ENB artifact. A separately enabled CTest accepts only the cache variable `ENBCORE_ENB_WRAPPER_PATH` and reads that external file in place.

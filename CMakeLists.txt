@@ -11,10 +11,19 @@ set(
     "Absolute external cache root containing the locked SDK archive and extracted header"
 )
 
+set(
+    ENBCORE_ENB_WRAPPER_PATH
+    ""
+    CACHE FILEPATH
+    "Optional absolute read-only path to an ENB wrapper build for fingerprint integration testing"
+)
+
 add_library(enb_runtime_core STATIC
     src/enb/LoadedHostResolver.cpp
     src/enb/SdkContract.cpp
+    src/enb/WrapperFingerprint.cpp
     src/platform/windows/WindowsLoadedModulePlatform.cpp
+    src/platform/windows/WindowsWrapperFingerprintPlatform.cpp
     src/runtime/CallbackSession.cpp
     src/runtime/LifecycleGate.cpp
 )
@@ -23,7 +32,7 @@ target_compile_features(enb_runtime_core PUBLIC cxx_std_23)
 target_include_directories(enb_runtime_core PUBLIC include)
 
 if(WIN32)
-    target_link_libraries(enb_runtime_core PRIVATE Psapi)
+    target_link_libraries(enb_runtime_core PRIVATE Bcrypt Psapi Version)
 endif()
 
 if(MSVC)
@@ -120,6 +129,19 @@ if(BUILD_TESTING)
 
     add_test(NAME enb_callback_session COMMAND enb_callback_session_tests)
 
+    add_executable(enb_wrapper_fingerprint_tests
+        tests/WrapperFingerprintTests.cpp
+    )
+
+    target_compile_features(enb_wrapper_fingerprint_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_wrapper_fingerprint_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(enb_wrapper_fingerprint_tests PRIVATE /W4 /WX /permissive-)
+    endif()
+
+    add_test(NAME enb_wrapper_fingerprint COMMAND enb_wrapper_fingerprint_tests)
+
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp
     )
@@ -150,4 +172,37 @@ if(BUILD_TESTING)
         enb_sdk_1002_abi_probe
         PROPERTIES DEPENDS enb_sdk_1002_hashes
     )
+
+    if(NOT ENBCORE_ENB_WRAPPER_PATH STREQUAL "")
+        cmake_path(IS_ABSOLUTE ENBCORE_ENB_WRAPPER_PATH enb_wrapper_path_is_absolute)
+        if(NOT enb_wrapper_path_is_absolute)
+            message(FATAL_ERROR "ENBCORE_ENB_WRAPPER_PATH must be an absolute path")
+        endif()
+
+        add_executable(enb_wrapper_fingerprint_integration_tests
+            tests/integration/EnbWrapperFingerprintIntegration.cpp
+        )
+        target_compile_features(
+            enb_wrapper_fingerprint_integration_tests
+            PRIVATE cxx_std_23
+        )
+        target_link_libraries(
+            enb_wrapper_fingerprint_integration_tests
+            PRIVATE enb_runtime_core
+        )
+
+        if(MSVC)
+            target_compile_options(
+                enb_wrapper_fingerprint_integration_tests
+                PRIVATE /W4 /WX /permissive-
+            )
+        endif()
+
+        add_test(
+            NAME enb_wrapper_fingerprint_integration
+            COMMAND
+                enb_wrapper_fingerprint_integration_tests
+                "${ENBCORE_ENB_WRAPPER_PATH}"
+        )
+    endif()
 endif()
