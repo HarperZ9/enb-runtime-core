@@ -46,6 +46,17 @@
       "execution": {
         "noTestsAction": "error"
       }
+    },
+    {
+      "name": "vs18-x64-static-release",
+      "configurePreset": "vs18-x64-static",
+      "configuration": "Release",
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error"
+      }
     }
   ]
 }
