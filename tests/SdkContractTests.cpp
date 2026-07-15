@@ -336,7 +336,7 @@ void required_export_failures_have_stable_codes()
     EXPECT(static_cast<std::uint16_t>(ValidationCode::MissingGetState) == 8U);
 }
 
-void sdk_version_admission_is_the_1000_family_from_1002()
+void sdk_version_policy_distinguishes_family_from_1002_floor()
 {
     using namespace enbcore::enb;
 
@@ -353,8 +353,10 @@ void sdk_version_admission_is_the_1000_family_from_1002()
         EXPECT(ValidateSdkHost(exports).code == ValidationCode::WrongSdkFamily);
     }
 
-    reported_sdk_version = 1001;
-    EXPECT(ValidateSdkHost(exports).code == ValidationCode::SdkVersionTooOld);
+    for (const SdkInteger version : std::array<SdkInteger, 2>{1000, 1001}) {
+        reported_sdk_version = version;
+        EXPECT(ValidateSdkHost(exports).code == ValidationCode::SdkVersionTooOld);
+    }
 }
 
 void wrong_game_identifier_is_rejected()
@@ -412,7 +414,7 @@ int main()
     mismatched_parameter_size_is_rejected();
     validation_result_defaults_to_fail_closed();
     required_export_failures_have_stable_codes();
-    sdk_version_admission_is_the_1000_family_from_1002();
+    sdk_version_policy_distinguishes_family_from_1002_floor();
     wrong_game_identifier_is_rejected();
     unavailable_render_info_is_not_ready();
     valid_sdk_host_is_accepted();

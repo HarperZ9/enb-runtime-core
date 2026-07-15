@@ -1,6 +1,6 @@
 # ENB Runtime Core
 
-`enb-runtime-core` is a small C++23 runtime library for resolving and fingerprinting an already-loaded ENB host, deferring callback work onto a bounded neutral event queue, and coordinating save quiescence, baseline restoration, and mutation reapplication. It has no third-party dependencies and owns no host or product objects.
+`enb-runtime-core` is a small C++23 runtime library for resolving and fingerprinting an already-loaded ENB host, deferring callback work onto a bounded neutral event queue, coordinating save quiescence and reapplication, and validating a fail-closed ENB-compatible Skyrim engine bridge. It has no third-party dependencies and owns no host, SKSE, CommonLib, renderer, or product objects.
 
 ## Build and test
 
@@ -60,4 +60,26 @@ The SDK thunk only validates the callback ID and writes an ordered record into a
 
 Host resolution must run from deferred bootstrap after the Windows loader entry point has returned. The library contains no loader entry point and never loads an ENB module.
 
+The Skyrim engine bridge admits only an exact executable fingerprint, then
+validates each adapter-supplied relocation and engine-symbol contract
+independently. Address Library artifacts are the first admitted relocation
+provider; the API also reserves a provider kind for Truth's future embedded
+relocation/signature manifest, so Address Library is not a permanent rule.
+Camera, depth, weather/time, render-phase, sky-shader, and lighting-shader
+capabilities all begin unavailable. Complete prologue bytes or an exact
+vtable-slot/RTTI contract are required before a hook can be reported ready.
+The core installs no hook.
+
+An injected `PatchJournal` can apply narrowly scoped data-property changes only
+when the product feature gate, lifecycle gate, exact runtime evaluation, and a
+validated capability all agree. It preflights the complete transaction,
+verifies every write, compensates partial application, and supports idempotent
+rollback. No Windows memory writer is included.
+
+This path retains SkyrimBridge's ENB-as-host architecture. It does not import
+RAW's replacement D3D11 proxy, phase classifier, DXBC patching, depth ownership,
+or renderer pipeline.
+
 See [Architecture Boundary](docs/ARCHITECTURE_BOUNDARY.md) for ownership and integration constraints.
+See [Skyrim Engine Bridge Contract](docs/SKYRIM_ENGINE_BRIDGE.md) for runtime,
+symbol, capability, evidence, and reversible-mutation requirements.

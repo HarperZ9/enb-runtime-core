@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The runtime core provides neutral loaded-host resolution and package fingerprinting, deferred callback delivery, and a deterministic lifecycle gate. It selects one compatible already-loaded host, classifies its on-disk build identity, moves callback notifications across an allocation-free boundary, answers whether a lifecycle transition is valid, and reports whether product mutation is permitted after that transition. It does not perform product mutation or baseline restoration itself.
+The runtime core provides neutral loaded-host resolution and package fingerprinting, deferred callback delivery, a deterministic lifecycle gate, and a fail-closed Skyrim engine-observation contract. It selects one compatible already-loaded host, classifies on-disk host and game identities, moves callback notifications across an allocation-free boundary, validates adapter-supplied engine symbol evidence, answers whether a lifecycle transition is valid, and journals explicitly gated reversible property patches. It does not install hooks, resolve live relocation symbols, or own product rendering.
 
 ## Owned responsibilities
 
@@ -23,6 +23,17 @@ The runtime core provides neutral loaded-host resolution and package fingerprint
 - Ordered translation of all eight SDK callback IDs into neutral records.
 - Bounded queue, unknown-ID, and overflow diagnostics.
 - Idempotent callback unregistration and publication teardown.
+- Exact Skyrim executable identity admission, currently limited to the captured
+  `1.6.1170.0` fingerprint.
+- Runtime- and version-constrained relocation-provider and engine-adapter
+  symbol descriptors.
+- Exact relocation-artifact admission. Address Library is the first provider;
+  an embedded product-owned manifest is a distinct reserved provider kind.
+- Module-bound, protection-aware prologue and vtable/RTTI validation results.
+- Six observer capabilities that remain unavailable when any assigned contract
+  is missing or invalid.
+- Transactional, read-back-verified property patch journaling with reverse
+  rollback and explicit recovery state.
 
 The `BeginSave` transition is synchronous. When accepted from `Active`, it records the quiesce and baseline-restored phases before returning `SaveInProgress`; callers never observe a partially accepted save entry.
 
@@ -40,11 +51,30 @@ The `BeginSave` transition is synchronous. When accepted from `Active`, it recor
 - Apply package or wrapper fingerprint admission before enabling product integration.
 - Choose strict or audit-only wrapper policy explicitly and retain unknown-build diagnostics.
 - Perform all host-specific mutation, restoration, logging, and recovery work.
+- Collect loaded `SkyrimSE.exe` file and image evidence without loading another
+  module.
+- Resolve relocation IDs through the selected provider and implement
+  memory-region, byte-read, byte-write, and MSVC RTTI inspection adapters.
+- Install and remove hooks only after the core reports a hook-ready contract.
+- Keep every engine mutation behind both an explicit product feature gate and
+  the lifecycle mutation gate.
 - Stop product work whenever a transition is rejected or mutation permission is false.
 
 ## Excluded concerns
 
-The library contains no module loading, loader entry point, graphics implementation, memory patching, creative controls, artistic values, profiles, packaged assets, endpoint configuration, or product-specific policy. Callback context contains no lifecycle dispatch, product mutation, allocation, blocking, or logging. Those concerns belong in integration layers outside this repository.
+The library contains no module loading, loader entry point, hook installer,
+SKSE/CommonLib dependency, D3D11 proxy, graphics implementation, shader
+replacement, creative controls, artistic values, profiles, packaged assets,
+endpoint configuration, or product-specific policy. The patch journal writes
+only through an injected adapter after all gates validate; this repository has
+no platform memory writer. Callback context contains no lifecycle dispatch,
+product mutation, allocation, blocking, or logging. Those concerns belong in
+integration layers outside this repository.
+
+The Skyrim bridge is ENB-compatible lineage: ENB remains the host. RAW's proxy
+ownership, nine-phase replacement pipeline, depth capture, DXBC patching, and
+renderer stack are explicitly outside this boundary. See
+[Skyrim Engine Bridge Contract](SKYRIM_ENGINE_BRIDGE.md).
 
 ## Transition summary
 

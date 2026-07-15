@@ -26,6 +26,8 @@ add_library(enb_runtime_core STATIC
     src/platform/windows/WindowsWrapperFingerprintPlatform.cpp
     src/runtime/CallbackSession.cpp
     src/runtime/LifecycleGate.cpp
+    src/skyrim/EngineBridge.cpp
+    src/skyrim/PatchJournal.cpp
 )
 
 target_compile_features(enb_runtime_core PUBLIC cxx_std_23)
@@ -141,6 +143,22 @@ if(BUILD_TESTING)
     endif()
 
     add_test(NAME enb_wrapper_fingerprint COMMAND enb_wrapper_fingerprint_tests)
+
+    add_executable(enb_skyrim_engine_bridge_tests
+        tests/SkyrimEngineBridgeTests.cpp
+    )
+
+    target_compile_features(enb_skyrim_engine_bridge_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_skyrim_engine_bridge_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(
+            enb_skyrim_engine_bridge_tests
+            PRIVATE /W4 /WX /permissive-
+        )
+    endif()
+
+    add_test(NAME skyrim_engine_bridge COMMAND enb_skyrim_engine_bridge_tests)
 
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp

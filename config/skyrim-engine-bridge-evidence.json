@@ -1,0 +1,224 @@
+{
+  "schema_version": 1,
+  "policy": {
+    "default_capability_state": "unavailable",
+    "runtime_identity_admission_is_not_symbol_admission": true,
+    "provider_loader_bytes_are_identity": false,
+    "mutation_default": "disabled",
+    "naked_offsets_are_trusted": false,
+    "raw_replacement_renderer_components_are_in_scope": false
+  },
+  "runtime_identity_allowlist": [
+    {
+      "identifier": "skyrim-se-1.6.1170.0-c4342088",
+      "loaded_module_name": "SkyrimSE.exe",
+      "original_filename": "TESV.exe",
+      "runtime_version": "1.6.1170.0",
+      "architecture": "x64",
+      "file_size": 37157144,
+      "sha256": "c434208894f07f604b852f29b8edc3a58c4de63de783373733e72b2b73f33be9",
+      "observed_installations": 2,
+      "admission_scope": "executable identity only; every symbol remains independently fail-closed"
+    }
+  ],
+  "skse_runtime_provider_allowlist": [
+    {
+      "identifier": "skse64-runtime-2.2.6",
+      "filename": "skse64_1_6_1170.dll",
+      "skse_version": "2.2.6",
+      "runtime_version": "1.6.1170.0",
+      "architecture": "x64",
+      "file_size": 1173504,
+      "sha256": "c9a2c8a80df6bf2372c5f49468bb2e5ab67786157265b6f29ece9f4eac075d54",
+      "admission_scope": "runtime provider DLL identity only; loader executables are intentionally excluded"
+    }
+  ],
+  "relocation_provider_artifact_allowlist": [
+    {
+      "provider_kind": "address_library",
+      "filename": "versionlib-1-6-1170-0.bin",
+      "runtime_version": "1.6.1170.0",
+      "file_size": 795129,
+      "sha256": "c4093c569a3c83b26587f4b9ea4c55de9ae6e73b84a2af9fb3fbd30e2fe0d452",
+      "observed_installations": 2,
+      "admission_scope": "initially admitted relocation artifact; external file is not distributed"
+    },
+    {
+      "provider_kind": "address_library",
+      "filename": "versionlib-1-6-1170-0-1.bin",
+      "runtime_version": "1.6.1170.0",
+      "file_size": 795210,
+      "sha256": "ac6d17e8a4bb4da2539e7a571113bcb28ae5adf4874cd977332f1a5215f65c07",
+      "observed_installations": 2,
+      "admission_scope": "initially admitted relocation artifact; external file is not distributed"
+    }
+  ],
+  "planned_native_relocation_provider": {
+    "provider_kind": "embedded_manifest",
+    "owner": "Truth ENB",
+    "status": "not yet allowlisted",
+    "requirements": "versioned relocation and signature records bound to an exact Skyrim executable identity, artifact hash, schema version, and per-symbol validation contract",
+    "distribution_goal": "ship inside the product so Address Library is not an end-user requirement"
+  },
+  "commonlib_evidence": {
+    "recovered_version": "3.7.0",
+    "source": "recovered build metadata",
+    "vcpkg_baselines": [
+      {
+        "registry": "colorglass",
+        "commit": "6309841a1ce770409708a67a9ba5c26c537d2937"
+      },
+      {
+        "registry": "microsoft",
+        "commit": "6bc1613f18f850c60d906575296f982c6dfcc9e0"
+      }
+    ],
+    "admission_scope": "statically linked adapter build provenance only; CommonLib is not an end-user runtime requirement and this record does not admit a symbol"
+  },
+  "provider_contract": {
+    "validated_relocation_provider_required": true,
+    "initially_admitted_relocation_provider_kinds": [
+      "address_library"
+    ],
+    "engine_adapter_build_version_required": true,
+    "commonlib_end_user_runtime_required": false,
+    "exact_skse_runtime_provider_required": true,
+    "skse_loader_identity_required": false,
+    "runtime_must_match_executable_identity": true,
+    "descriptor_version_ranges_are_inclusive": true,
+    "unknown_adapter_schema_names": "reject; never default to a valid target or source enum",
+    "inline_hook_requirement": "complete expected prologue bytes plus readable executable module range",
+    "vtable_hook_requirement": "declared slot plus exact RTTI identity plus readable vtable and executable module target"
+  },
+  "recovered_enb_plugin_abi_evidence": [
+    {
+      "identifier": "truth-skyrimbridge-enb-legacy",
+      "filename": "SkyrimBridge_ENB.dllplugin",
+      "file_size": 152576,
+      "sha256": "038bb389f0c786aab4be62980e3f3891309f8553daf70f434b086644d2edfdb2",
+      "architecture": "x64",
+      "pe_image_size": 176128,
+      "pe_timestamp": "2026-03-02",
+      "imports": [
+        "KERNEL32.dll"
+      ],
+      "exports": [
+        "ENBGetParameter",
+        "ENBGetSDKVersion",
+        "ENBModuleDeInit",
+        "ENBModuleInit",
+        "ENBOnPostReset",
+        "ENBOnPreReset"
+      ],
+      "adapter_shape": "pull-style exported provider",
+      "reported_sdk_version": 1000,
+      "sdk_family_compatibility": "same 1000-family as SDK1002 under the official major-version rule",
+      "admission_scope": "legacy behavioral evidence only; below this core's explicit SDK1002 contract floor, without implying major-family incompatibility"
+    },
+    {
+      "identifier": "playground-enb-adapter-incomplete",
+      "filename": "Playground_ENB.dllplugin",
+      "file_size": 155136,
+      "sha256": "be7e0c1b0bcacbd58185991df8632ef36f4d015f3cd9e47e38e14bf92086f280",
+      "architecture": "x64",
+      "pe_image_size": 184320,
+      "pe_timestamp": "2026-03-11",
+      "imports": [
+        "KERNEL32.dll"
+      ],
+      "exports": [],
+      "adapter_shape": "DllMain-only push adapter resolving ENBSetCallbackFunction and ENBSetParameter",
+      "admission_scope": "incomplete behavioral evidence only; absence of the required export surface prevents admission"
+    },
+    {
+      "identifier": "protected-enb-0.504-wrapper",
+      "reported_sdk_version": 1002,
+      "admission_scope": "host SDK version evidence only; the official SDK1002 example still reports plugin version 1000 as same-major compatible; protected binary is not distributed"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "camera_inverse_view_projection",
+      "recovered_evidence": "typed CommonLib access to PlayerCamera and Main::WorldRootCamera; worldToCam and frustum data",
+      "live_contract": "adapter_required",
+      "default": "unavailable"
+    },
+    {
+      "name": "depth_shader_resource",
+      "recovered_evidence": "the recovered implementation obtains depth through the replacement D3D11 proxy",
+      "live_contract": "not_admitted_for_enb_bridge",
+      "default": "unavailable"
+    },
+    {
+      "name": "weather_time_of_day",
+      "recovered_evidence": "typed CommonLib access to Sky, TESWeather, currentWeatherPct, and currentGameHour",
+      "live_contract": "adapter_required",
+      "default": "unavailable"
+    },
+    {
+      "name": "render_phases",
+      "recovered_evidence": "the recovered nine-phase classifier belongs to the replacement D3D11 proxy lineage",
+      "live_contract": "not_admitted_for_enb_bridge",
+      "default": "unavailable"
+    },
+    {
+      "name": "sky_shader_observation",
+      "recovered_evidence": "no complete BSSkyShader runtime descriptor was recovered",
+      "live_contract": "missing",
+      "default": "unavailable"
+    },
+    {
+      "name": "lighting_shader_observation",
+      "recovered_evidence": "BSLightingShader SetupMaterial slot 4 and SetupGeometry slot 6 were observed through CommonLib vtable symbols",
+      "live_contract": "candidate_only_until_runtime RTTI, slot target, and memory protection validate",
+      "default": "unavailable"
+    }
+  ],
+  "rejected_recovered_patterns": [
+    {
+      "source": "src/core/MaterialTracker.cpp",
+      "reason": "SE 101341 / AE 108328 was followed by a blind 14-byte prologue copy and absolute detour"
+    },
+    {
+      "source": "src/core/EngineFixes.cpp",
+      "reason": "BSSpinLock ID 68233 plus 0x3c is unrelated to the ENB bridge and is not migrated"
+    },
+    {
+      "source": "WriteBackProcessor::ParseTarget and ParseSource",
+      "reason": "unknown strings silently defaulted to CameraFOV and Fixed; future adapter schemas must reject unknown target and source names"
+    },
+    {
+      "source": "src/d3d11_proxy and RAW lineage",
+      "reason": "proxy ownership, phase classification, DXBC patching, and replacement rendering are different project DNA"
+    }
+  ],
+  "evidence_sources": [
+    {
+      "uri": "protected://reverse-engineering/SKSE/Playground/PLAYGROUND_RENDERING_ARCHITECTURE.md",
+      "repository_commit": "b0704306b5a00c7bb7d0b5c2d299557ebedbb835",
+      "sha256_lf_normalized": "d612598163683a4f22cf7df31829b7dc5bb5165f7caa0fd2f8a91b32417805e8"
+    },
+    {
+      "uri": "protected://reverse-engineering/SKSE/Playground/RENDERING_PIPELINE_REFERENCE.md",
+      "repository_commit": "b0704306b5a00c7bb7d0b5c2d299557ebedbb835",
+      "sha256_lf_normalized": "c44119f6062b10148528c750501b078d4516ae6d953afd2d31524b2c287fd409"
+    },
+    {
+      "uri": "protected://reverse-engineering/SKSE/Playground/docs/ARCHITECTURE.md",
+      "repository_commit": "b0704306b5a00c7bb7d0b5c2d299557ebedbb835",
+      "sha256_lf_normalized": "b510c1e85841532523ff5d7ef657d652aa9014af387fba0344b2fd91dfb8bc38"
+    },
+    {
+      "uri": "protected://reverse-engineering/SKSE/Playground/src/core/CameraTracker.cpp",
+      "use": "behavioral evidence only; no source is copied"
+    },
+    {
+      "uri": "protected://reverse-engineering/SKSE/Playground/src/core/WeatherTracker.cpp",
+      "use": "behavioral evidence only; no source is copied"
+    },
+    {
+      "uri": "protected://reverse-engineering/SKSE/Playground/src/core/SceneObserver.cpp",
+      "use": "candidate vtable-slot evidence only; not a trusted live descriptor"
+    }
+  ]
+}
