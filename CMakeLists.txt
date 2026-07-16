@@ -25,6 +25,7 @@ add_library(enb_runtime_core STATIC
     src/platform/windows/WindowsLoadedModulePlatform.cpp
     src/platform/windows/WindowsWrapperFingerprintPlatform.cpp
     src/runtime/CallbackSession.cpp
+    src/runtime/FramePulse.cpp
     src/runtime/LifecycleGate.cpp
     src/skyrim/AddressLibraryDatabase.cpp
     src/skyrim/EngineBridge.cpp
@@ -194,6 +195,19 @@ if(BUILD_TESTING)
     endif()
 
     add_test(NAME engine_properties COMMAND enb_engine_property_tests)
+
+    add_executable(enb_frame_pulse_tests
+        tests/FramePulseTests.cpp
+    )
+
+    target_compile_features(enb_frame_pulse_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_frame_pulse_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(enb_frame_pulse_tests PRIVATE /W4 /WX /permissive-)
+    endif()
+
+    add_test(NAME frame_pulse COMMAND enb_frame_pulse_tests)
 
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp
