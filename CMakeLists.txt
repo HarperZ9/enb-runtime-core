@@ -25,6 +25,7 @@ add_library(enb_runtime_core STATIC
     src/platform/windows/WindowsLoadedModulePlatform.cpp
     src/platform/windows/WindowsWrapperFingerprintPlatform.cpp
     src/runtime/CallbackSession.cpp
+    src/runtime/CameraPublication.cpp
     src/runtime/FramePulse.cpp
     src/runtime/LifecycleGate.cpp
     src/skyrim/AddressLibraryDatabase.cpp
@@ -208,6 +209,19 @@ if(BUILD_TESTING)
     endif()
 
     add_test(NAME frame_pulse COMMAND enb_frame_pulse_tests)
+
+    add_executable(enb_camera_publication_tests
+        tests/CameraPublicationTests.cpp
+    )
+
+    target_compile_features(enb_camera_publication_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_camera_publication_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(enb_camera_publication_tests PRIVATE /W4 /WX /permissive-)
+    endif()
+
+    add_test(NAME camera_publication COMMAND enb_camera_publication_tests)
 
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp
