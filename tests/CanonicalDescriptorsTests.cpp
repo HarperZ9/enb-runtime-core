@@ -21,36 +21,48 @@ void expect(const bool condition, const char* expression, const char* file, cons
 
 using namespace enbcore::skyrim;
 
-void weather_descriptor_carries_the_recovered_sky_relocation()
+void data_singletons_carry_the_recovered_ae_ids()
 {
-    const SymbolDescriptor descriptor = WeatherTimeOfDayDescriptor();
+    const SymbolDescriptor camera = PlayerCameraSingletonDescriptor();
+    EXPECT(camera.relocation_id == 400802U);  // PlayerCamera::Singleton, AE 1.6.1170
+    EXPECT(camera.capability == Capability::CameraInverseViewProjection);
+    EXPECT(camera.contract == SymbolContract::ReadOnlyData);
+    EXPECT(!camera.identifier.empty());
 
-    // Recovered from the research: RE::Sky::GetSingleton -> REL::ID(302296).
-    EXPECT(descriptor.relocation_id == 302296U);
-    EXPECT(descriptor.capability == Capability::WeatherTimeOfDay);
-    // The Sky singleton is a data pointer, not a hooked function.
-    EXPECT(descriptor.contract == SymbolContract::ReadOnlyData);
-    EXPECT(!descriptor.identifier.empty());
+    const SymbolDescriptor calendar = CalendarSingletonDescriptor();
+    EXPECT(calendar.relocation_id == 400447U);  // Calendar::Singleton, AE 1.6.1170
+    EXPECT(calendar.capability == Capability::WeatherTimeOfDay);
+    EXPECT(calendar.contract == SymbolContract::ReadOnlyData);
+    EXPECT(!calendar.identifier.empty());
 }
 
-void weather_descriptor_is_version_gated_to_1_6_1170_ae_address_library()
+void descriptors_are_version_gated_to_1_6_1170_ae_address_library()
 {
-    const SymbolDescriptor descriptor = WeatherTimeOfDayDescriptor();
-    const RuntimeSymbolConstraint& constraint = descriptor.constraints;
-
     const RuntimeVersion expected_runtime{1, 6, 1170, 0};
-    EXPECT(constraint.runtime_version == expected_runtime);
-    EXPECT(constraint.relocation_provider_kind == RelocationProviderKind::AddressLibrary);
-    EXPECT(constraint.runtime_variant == RuntimeVariant::AnniversaryEdition);
+    for (const SymbolDescriptor& descriptor :
+         {PlayerCameraSingletonDescriptor(), CalendarSingletonDescriptor()}) {
+        EXPECT(descriptor.constraints.runtime_version == expected_runtime);
+        EXPECT(descriptor.constraints.relocation_provider_kind
+               == RelocationProviderKind::AddressLibrary);
+        EXPECT(descriptor.constraints.runtime_variant == RuntimeVariant::AnniversaryEdition);
+    }
 }
 
-void recovered_sky_member_layout_is_exposed()
+void function_accessor_ids_are_recorded_but_not_shipped_as_data()
 {
-    // Recovered member offsets for the read the adapter performs off the
-    // resolved Sky pointer.
+    // The Sky and WorldRootCamera accessors are functions; their ids are known
+    // but they require captured prologue bytes, so they are constants only,
+    // never mis-typed as read-only-data descriptors.
+    EXPECT(kSkyGetSingletonFunctionId == 13878U);
+    EXPECT(kMainWorldRootCameraFunctionId == 36609U);
+}
+
+void recovered_member_layouts_are_exposed()
+{
+    EXPECT(kPlayerCameraWorldFovOffset == 0x13CU);
     EXPECT(kSkyCurrentWeatherOffset == 0x048U);
     EXPECT(kSkyCurrentWeatherPctOffset == 0x360U);
-    EXPECT(kSkySize == 0x480U);
+    EXPECT(kTesWeatherColorDataOffset == 0x698U);
     EXPECT(kSkyCurrentWeatherOffset < kSkySize);
     EXPECT(kSkyCurrentWeatherPctOffset < kSkySize);
 }
@@ -59,9 +71,10 @@ void recovered_sky_member_layout_is_exposed()
 
 int main()
 {
-    weather_descriptor_carries_the_recovered_sky_relocation();
-    weather_descriptor_is_version_gated_to_1_6_1170_ae_address_library();
-    recovered_sky_member_layout_is_exposed();
+    data_singletons_carry_the_recovered_ae_ids();
+    descriptors_are_version_gated_to_1_6_1170_ae_address_library();
+    function_accessor_ids_are_recorded_but_not_shipped_as_data();
+    recovered_member_layouts_are_exposed();
 
     if (failures != 0) {
         std::cerr << failures << " assertion(s) failed\n";

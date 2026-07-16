@@ -3,7 +3,7 @@
 namespace enbcore::skyrim {
 namespace {
 
-[[nodiscard]] RuntimeSymbolConstraint SkyConstraint() noexcept
+[[nodiscard]] RuntimeSymbolConstraint AeReadConstraint() noexcept
 {
     RuntimeSymbolConstraint constraint{};
     constraint.runtime_version = RuntimeVersion{1, 6, 1170, 0};
@@ -12,17 +12,36 @@ namespace {
     return constraint;
 }
 
-}  // namespace
-
-SymbolDescriptor WeatherTimeOfDayDescriptor() noexcept
+[[nodiscard]] SymbolDescriptor DataSingletonDescriptor(
+    const std::string_view identifier,
+    const Capability capability,
+    const std::uint64_t relocation_id) noexcept
 {
     SymbolDescriptor descriptor{};
-    descriptor.identifier = "RE::Sky::GetSingleton";
-    descriptor.capability = Capability::WeatherTimeOfDay;
-    descriptor.relocation_id = kSkyGetSingletonRelocationId;
-    descriptor.constraints = SkyConstraint();
+    descriptor.identifier = identifier;
+    descriptor.capability = capability;
+    descriptor.relocation_id = relocation_id;
+    descriptor.constraints = AeReadConstraint();
     descriptor.contract = SymbolContract::ReadOnlyData;
     return descriptor;
+}
+
+}  // namespace
+
+SymbolDescriptor PlayerCameraSingletonDescriptor() noexcept
+{
+    return DataSingletonDescriptor(
+        "RE::PlayerCamera::Singleton",
+        Capability::CameraInverseViewProjection,
+        kPlayerCameraSingletonId);
+}
+
+SymbolDescriptor CalendarSingletonDescriptor() noexcept
+{
+    return DataSingletonDescriptor(
+        "RE::Calendar::Singleton",
+        Capability::WeatherTimeOfDay,
+        kCalendarSingletonId);
 }
 
 }  // namespace enbcore::skyrim
