@@ -29,6 +29,7 @@ add_library(enb_runtime_core STATIC
     src/runtime/FramePulse.cpp
     src/runtime/LifecycleGate.cpp
     src/skyrim/AddressLibraryDatabase.cpp
+    src/skyrim/CanonicalDescriptors.cpp
     src/skyrim/EngineBridge.cpp
     src/skyrim/EngineProperties.cpp
     src/skyrim/ObjectPropertyJournal.cpp
@@ -222,6 +223,19 @@ if(BUILD_TESTING)
     endif()
 
     add_test(NAME camera_publication COMMAND enb_camera_publication_tests)
+
+    add_executable(enb_canonical_descriptors_tests
+        tests/CanonicalDescriptorsTests.cpp
+    )
+
+    target_compile_features(enb_canonical_descriptors_tests PRIVATE cxx_std_23)
+    target_link_libraries(enb_canonical_descriptors_tests PRIVATE enb_runtime_core)
+
+    if(MSVC)
+        target_compile_options(enb_canonical_descriptors_tests PRIVATE /W4 /WX /permissive-)
+    endif()
+
+    add_test(NAME canonical_descriptors COMMAND enb_canonical_descriptors_tests)
 
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp
