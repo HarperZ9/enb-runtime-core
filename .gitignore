@@ -14,3 +14,6 @@ CLAUDE.local.md
 .env.*
 # ...but the committed template must survive the .env.* rule above
 !.env.example
+
+# Build output (global standard: never commit)
+dist/
