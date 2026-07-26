@@ -5,3 +5,6 @@
 *.suo
 *.VC.db
 *.VC.opendb
+
+# Local-only Claude instructions (global standard: never commit)
+CLAUDE.local.md
