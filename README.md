@@ -2,6 +2,22 @@
 
 `enb-runtime-core` is a small C++23 runtime library for resolving and fingerprinting an already-loaded ENB host, deferring callback work onto a bounded neutral event queue, coordinating save quiescence and reapplication, and validating a fail-closed ENB-compatible Skyrim engine bridge. It has no third-party dependencies and owns no host, SKSE, CommonLib, renderer, or product objects.
 
+## Host requirement
+
+This library requires ENBSeries. It resolves and fingerprints an ENB module that
+is already loaded in the process, so it does nothing under a shader framework
+that does not present one.
+
+Community Shaders and its Effects 11 feature are the case that matters today.
+Effects 11 reimplements ENBSeries and cannot be installed alongside it, and
+Community Shaders exports only the three SKSE entry points. It publishes no ENB
+API of its own; it consumes the ENB API as a client when an ENB module happens
+to be present. Under Effects 11 there is no module for this library to resolve,
+so it is inert there by design rather than by defect.
+
+No abstraction over both hosts is planned. That becomes worth building when a
+second host exposes an interface to abstract over.
+
 ## Build and test
 
 Requirements:
