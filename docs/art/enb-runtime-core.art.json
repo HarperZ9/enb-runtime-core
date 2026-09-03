@@ -1,0 +1,87 @@
+{
+  "header": {
+    "name": "enb-runtime-core",
+    "role": "a C++ runtime for an ENB host that is already loaded",
+    "tagline": "Resolve the host that is there. Refuse everything else.",
+    "words": ["resolve", "fingerprint", "defer", "gate", "refuse"]
+  },
+  "flows": [
+    {
+      "file": "host-admission.svg",
+      "kicker": "an ENB module in the process is not yet a host this library will talk to",
+      "title": "How an already-loaded ENB module is admitted, or refused",
+      "footnote": "Two gates, deliberately separate. The first asks whether the module speaks the SDK: eight typed exports, a version inside the admitted family, and one game identifier. The second asks which build it is, from the file on disk rather than from anything the module reports about itself. An admitted SDK report grants no package identity, and evidence nobody can read stays unknown rather than being rounded to a build.",
+      "alt": "Eight stages taking a loaded module to an admitted host: snapshot, anchor, exports, SDK report, render info, module path, fingerprint, allowlist. The platform adapter snapshots only the modules already present in the process, and the library never loads one. A module with no anchor is ignored, and a partial or ambiguous snapshot fails closed rather than guessing. Eight typed export names are resolved from the surviving handle, and all eight are required. The SDK report is admitted for versions 1002 through 1999 with game identifier 0x10000006. A host that has not published render information yet returns NotReady together with its complete export table, so deferred bootstrap can retry without treating readiness as incompatibility. Package identity is a separate gate: the full module path is taken from the resolved handle, the existing file is streamed through SHA-256, and its byte size, PE machine, four-part FileVersion and OriginalFilename are read from the version resource. The immutable allowlist holds one captured build. A complete but unlisted observation is an unknown build, and missing or malformed evidence stays unavailable. Three outcomes: admitted against one captured build, admitted audit-only with the evidence still named unknown, and refused when there is no module to resolve.",
+      "stages": [
+        { "title": "Snapshot", "note": "Modules already in the process." },
+        { "title": "Anchor", "note": "An anchorless module is ignored." },
+        { "title": "Exports", "note": "Eight typed names, or none." },
+        { "title": "SDK report", "note": "1002 to 1999, and one game id." },
+        { "title": "Render info", "note": "Not ready keeps the export table." },
+        { "title": "Module path", "note": "The file on disk, never loaded." },
+        { "title": "Fingerprint", "note": "SHA-256, size, machine, version." },
+        { "title": "Allowlist", "note": "One captured build admitted." }
+      ],
+      "returns": [
+        { "from": 2, "to": 0, "label": "A PARTIAL SNAPSHOT FAILS CLOSED" },
+        { "from": 7, "to": 5, "label": "UNKNOWN EVIDENCE STAYS UNKNOWN" }
+      ],
+      "outcomes": [
+        { "label": "ADMITTED", "note": "one captured build, hash exact", "tone": "verified" },
+        { "label": "AUDIT ONLY", "note": "unlisted, and named as unlisted", "tone": "drift" },
+        { "label": "REFUSED", "note": "no ENB module to resolve", "tone": "none" }
+      ]
+    },
+    {
+      "file": "lifecycle-gate.svg",
+      "kicker": "a save that lands on top of a mutated engine is the failure this exists to prevent",
+      "title": "How the lifecycle gate holds a save and gives the engine back",
+      "footnote": "The gate never infers a save outcome from a frame callback. A first BeginSave from Active requires the caller to acknowledge that baseline restoration completed, nested saves hold the save state until every matching outcome has arrived, and only ReapplyAtVerifiedBarrier returns the gate to Active. The generation counter moves exactly once on that return, so a caller can tell a reapplied run from the one before it.",
+      "alt": "Eight stages holding a save: bootstrap, activate, begin save, quiesce, nested, outcome, reapply pending, active again. The gate starts in inactive bootstrap with product mutation denied, and Active is the only state that permits a write. A first BeginSave from Active requires the caller to acknowledge that baseline restoration completed, and the gate then atomically records quiesce requested, baseline restored, and save in progress. Nested saves retain the save state until every matching outcome has arrived. SaveSucceeded, SaveFailed and SaveCancelled all converge on reapply pending after the outermost outcome, and mutation stays denied there. Only ReapplyAtVerifiedBarrier returns the gate to Active, incrementing the application generation exactly once. Shutdown and interruption paths retain mutation denial, and starting either from Active requires the same restoration acknowledgement. A rejected event carries a diagnostic code and changes no state. Three outcomes: mutation permitted only in the active state, reapply pending while the gate waits on a verified barrier, and denied in every other state.",
+      "stages": [
+        { "title": "Bootstrap", "note": "Nine states. Mutation denied." },
+        { "title": "Activate", "note": "The one state that permits a write." },
+        { "title": "Begin save", "note": "Baseline restoration acknowledged." },
+        { "title": "Quiesce", "note": "Requested, restored, in progress." },
+        { "title": "Nested", "note": "Every matching outcome must arrive." },
+        { "title": "Outcome", "note": "Succeeded, failed or cancelled." },
+        { "title": "Reapply", "note": "Denied until a verified barrier." },
+        { "title": "Active again", "note": "Generation moves exactly once." }
+      ],
+      "returns": [
+        { "from": 2, "to": 0, "label": "A REJECTED EVENT CHANGES NO STATE" },
+        { "from": 6, "to": 4, "label": "NESTED SAVES HOLD THE SAVE STATE" }
+      ],
+      "outcomes": [
+        { "label": "MUTATION PERMITTED", "note": "the active state, and only it", "tone": "verified" },
+        { "label": "REAPPLY PENDING", "note": "waiting on a verified barrier", "tone": "drift" },
+        { "label": "DENIED", "note": "every other state, failed included", "tone": "none" }
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "file": "runtime-table.svg",
+      "kicker": "counts, not adjectives",
+      "title": "What the runtime admits, and where each number is read from",
+      "source": "include/enbcore and src, on this checkout",
+      "heads": ["the runtime admits", "how many", "where the number comes from"],
+      "alt": "A table of twelve rows: what the runtime admits, how many of it there are, and where each number is read from. The SDK contract requires eight typed exports. The lifecycle gate declares nine states and nine events. Host validation has sixteen result codes. Seven engine properties are named in the first typed schema, and two of the seven are reversible write targets while the rest are observer-only. Six capabilities are declared, and each begins unavailable. The wrapper allowlist holds one captured build. Two Address Library artifacts are admitted for the supported runtime. Twenty-eight C++ source and header files hold five thousand four hundred and sixty-five lines. Two of the six capabilities have a shipped canonical descriptor, so the other four cannot report ready.",
+      "footnote": "Every count here was read from the header or source that declares it rather than typed in, and tools/check_repo_facts.py reads those same files. The marked row is the honest null: four of the six capabilities have no canonical descriptor shipped, so they stay unavailable no matter what the host presents.",
+      "fields": [
+        { "key": "sdk exports", "value": "eight names", "note": "SdkExports in SdkContract.hpp. All eight are required, and a missing one has its own validation code rather than a generic failure." },
+        { "key": "lifecycle states", "value": "nine of them", "note": "State in LifecycleGate.hpp, from inactive bootstrap through shutdown, stopped and failed. Mutation is permitted in exactly one of them." },
+        { "key": "lifecycle events", "value": "nine of them", "note": "Event in LifecycleGate.hpp. The caller supplies every save outcome, and no host post-save callback is assumed anywhere in the gate." },
+        { "key": "validation codes", "value": "sixteen codes", "note": "ValidationCode in SdkContract.hpp. Fifteen refusals and one acceptance, so a rejected host says which check it failed." },
+        { "key": "engine properties", "value": "seven named", "note": "EnginePropertyCount in EngineProperties.hpp: camera field of view, the inverse view projection, weather identity and blend, and the game hour." },
+        { "key": "writable fields", "value": "two of the seven", "note": "Camera world and first-person field of view carry ObserveAndReversibleObjectWrite. The other five are observer-only in the schema itself." },
+        { "key": "capabilities", "value": "six of them", "note": "CapabilityCount in EngineBridge.hpp: camera, depth, weather and time, render phases, sky shader, lighting shader. Each begins unavailable." },
+        { "key": "wrapper allowlist", "value": "one build", "note": "kSupportedBuilds in WrapperFingerprint.cpp holds the captured x64 0.5.0.4 wrapper, pinned by digest, byte size, machine and original filename." },
+        { "key": "address library", "value": "two artifacts", "note": "kSupportedRelocationProviders in EngineBridge.cpp. Both are Anniversary Edition 1.6.1170.0, pinned by digest and by exact file size." },
+        { "key": "source files", "value": "28 files", "note": "Headers under include/enbcore and translation units under src. No third-party dependency, and no vendored SDK." },
+        { "key": "source lines", "value": "5,465 lines", "note": "Counted across those files. The test tree adds thirteen more files and eleven CTest targets that run without any external input." },
+        { "key": "shipped descriptors", "value": "two of six", "note": "CanonicalDescriptors.cpp ships a player-camera and a calendar singleton. The other four capabilities have no descriptor and cannot report ready.", "tone": "drift" }
+      ]
+    }
+  ]
+}

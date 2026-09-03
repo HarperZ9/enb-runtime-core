@@ -21,3 +21,6 @@ dist/
 # direnv environment files (can hold exported secrets)
 .envrc
 .envrc.local
+
+# The artwork gates are Python.
+__pycache__/

@@ -2,6 +2,8 @@
 
 `enb-runtime-core` is a small C++23 runtime library for resolving and fingerprinting an already-loaded ENB host, deferring callback work onto a bounded neutral event queue, coordinating save quiescence and reapplication, and validating a fail-closed ENB-compatible Skyrim engine bridge. It has no third-party dependencies and owns no host, SKSE, CommonLib, renderer, or product objects.
 
+![The enb-runtime-core mark: resolve, fingerprint, defer, gate, refuse.](docs/art/enb-runtime-core-header.svg)
+
 ## Host requirement
 
 This library requires ENBSeries. It resolves and fingerprints an ENB module that
@@ -51,6 +53,21 @@ cmake --preset vs18-x64-static `
 ```
 
 The wrapper is opened in place and is never copied, vendored, or loaded by the library.
+
+## How a loaded host is admitted
+
+![Eight stages taking a loaded module to an admitted host: snapshot, anchor, exports, SDK report, render info, module path, fingerprint, allowlist. The platform adapter snapshots only the modules already present in the process, and the library never loads one. A module with no anchor is ignored, and a partial or ambiguous snapshot fails closed rather than guessing. Eight typed export names are resolved from the surviving handle, and all eight are required. The SDK report is admitted for versions 1002 through 1999 with game identifier 0x10000006. A host that has not published render information yet returns NotReady together with its complete export table, so deferred bootstrap can retry without treating readiness as incompatibility. Package identity is a separate gate: the full module path is taken from the resolved handle, the existing file is streamed through SHA-256, and its byte size, PE machine, four-part FileVersion and OriginalFilename are read from the version resource. The immutable allowlist holds one captured build. A complete but unlisted observation is an unknown build, and missing or malformed evidence stays unavailable. Three outcomes: admitted against one captured build, admitted audit-only with the evidence still named unknown, and refused when there is no module to resolve.](docs/art/host-admission.svg)
+
+## How the lifecycle gate holds a save
+
+![Eight stages holding a save: bootstrap, activate, begin save, quiesce, nested, outcome, reapply pending, active again. The gate starts in inactive bootstrap with product mutation denied, and Active is the only state that permits a write. A first BeginSave from Active requires the caller to acknowledge that baseline restoration completed, and the gate then atomically records quiesce requested, baseline restored, and save in progress. Nested saves retain the save state until every matching outcome has arrived. SaveSucceeded, SaveFailed and SaveCancelled all converge on reapply pending after the outermost outcome, and mutation stays denied there. Only ReapplyAtVerifiedBarrier returns the gate to Active, incrementing the application generation exactly once. Shutdown and interruption paths retain mutation denial, and starting either from Active requires the same restoration acknowledgement. A rejected event carries a diagnostic code and changes no state. Three outcomes: mutation permitted only in the active state, reapply pending while the gate waits on a verified barrier, and denied in every other state.](docs/art/lifecycle-gate.svg)
+
+## What the runtime admits
+
+![A table of twelve rows: what the runtime admits, how many of it there are, and where each number is read from. The SDK contract requires eight typed exports. The lifecycle gate declares nine states and nine events. Host validation has sixteen result codes. Seven engine properties are named in the first typed schema, and two of the seven are reversible write targets while the rest are observer-only. Six capabilities are declared, and each begins unavailable. The wrapper allowlist holds one captured build. Two Address Library artifacts are admitted for the supported runtime. Twenty-eight C++ source and header files hold five thousand four hundred and sixty-five lines. Two of the six capabilities have a shipped canonical descriptor, so the other four cannot report ready.](docs/art/runtime-table.svg)
+
+Every count in that table is read back out of the header or source that
+declares it by `tools/check_repo_facts.py`, which CTest runs as its own test.
 
 ## Contract
 
