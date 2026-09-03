@@ -237,6 +237,25 @@ if(BUILD_TESTING)
 
     add_test(NAME canonical_descriptors COMMAND enb_canonical_descriptors_tests)
 
+    # The artwork gates are stdlib Python, so they are added when an interpreter
+    # is present and skipped silently when one is not. A drawing that no longer
+    # matches the source is a failing test here, not a stale file nobody reads.
+    find_package(Python3 COMPONENTS Interpreter QUIET)
+    if(Python3_Interpreter_FOUND)
+        add_test(
+            NAME repo_facts
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/check_repo_facts.py"
+        )
+        add_test(
+            NAME repo_art
+            COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/tools/check_repo_art.py"
+        )
+        set_tests_properties(
+            repo_facts repo_art
+            PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        )
+    endif()
+
     add_executable(enb_sdk_1002_abi_probe
         tests/abi/EnbSdk1002AbiProbe.cpp
     )

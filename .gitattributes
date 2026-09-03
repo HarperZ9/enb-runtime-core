@@ -4,3 +4,7 @@
 *.hpp text eol=lf
 *.json text eol=lf
 *.md text eol=lf
+
+# The art gate compares rendered bytes, so these must not be translated.
+docs/art/*.svg  text eol=lf
+docs/art/*.json text eol=lf

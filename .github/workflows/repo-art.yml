@@ -1,0 +1,24 @@
+name: repo-art
+
+# The C++ build needs MSVC and an external SDK cache, so it is not run here.
+# These two gates are standard library Python and read the same headers the
+# library compiles, so they run on any runner and catch a drawing that has
+# drifted from the source it describes.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  art:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: The card still matches the source it describes
+        run: python tools/check_repo_facts.py
+      - name: The artwork still matches its spec
+        run: python tools/check_repo_art.py
